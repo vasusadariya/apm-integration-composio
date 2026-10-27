@@ -122,18 +122,19 @@ async def stream_guide_generation(
     try:
         # Run the synchronous Gemini call in a thread to keep FastAPI async
         def _call_gemini() -> str:
-            configured_model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+            configured_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
             candidate_models = [
                 configured_model,
+                "gemini-3.5-flash",
                 "gemini-3.8-flash",
-                "gemini-2.5-flash",
-                "gemini-1.5-flash",
+                "gemini-flash-latest",
             ]
             # Deduplicate while preserving order
             models_to_try = list(dict.fromkeys(candidate_models))
 
             last_err = None
             for model_name in models_to_try:
+                # 1. First attempt: with Google Search grounding tool (if available/quota permits)
                 try:
                     response = client.models.generate_content(
                         model=model_name,
@@ -148,9 +149,27 @@ async def stream_guide_generation(
                 except Exception as e:
                     last_err = e
                     err_str = str(e)
-                    if "404" in err_str or "NOT_FOUND" in err_str or "no longer available" in err_str:
+                    # If 429 (quota exhausted on search grounding tool) or 503 (demand spike):
+                    # retry with direct model knowledge (no search tool quota required)
+                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "503" in err_str:
+                        try:
+                            response = client.models.generate_content(
+                                model=model_name,
+                                contents=prompt,
+                                config=types.GenerateContentConfig(
+                                    system_instruction=SYSTEM_INSTRUCTION,
+                                    temperature=0.2,
+                                ),
+                            )
+                            return response.text.strip()
+                        except Exception as inner_e:
+                            last_err = inner_e
+                            continue
+                    elif "404" in err_str or "NOT_FOUND" in err_str or "no longer available" in err_str:
                         continue
-                    raise e
+                    else:
+                        continue
+
             if last_err:
                 raise last_err
             return ""
