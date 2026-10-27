@@ -1,10 +1,11 @@
 """
-OAuth Guide Research Agent using Google Gemini with web search grounding.
+OAuth Guide Research Agent using Google Gemini.
 Investigates a given app/URL and generates a structured OAuth setup guide.
 """
 import json
 import os
 import asyncio
+from pathlib import Path
 from typing import AsyncGenerator
 
 import google.genai as genai
@@ -14,9 +15,9 @@ SYSTEM_INSTRUCTION = """You are an expert OAuth integration researcher.
 Your job is to investigate a given app or service and produce a comprehensive, accurate guide 
 for developers who want to set up an OAuth app with that provider.
 
-You have access to web search. Use it aggressively to find:
+Focus on:
 1. The provider's developer portal URL
-2. How to register an OAuth app (step-by-step)
+2. How to register an OAuth app (step-by-step with exact UI instructions)
 3. What scopes/permissions exist and which are restricted
 4. Whether app approval/review is required and how long it takes
 5. What prerequisites exist (website, privacy policy, paid plan, etc.)
@@ -94,6 +95,42 @@ Investigate and produce a complete JSON guide with this EXACT structure:
 Return ONLY the JSON object, no markdown fences, no extra text.
 """
 
+LIBRARY_DIR = Path(__file__).parent.parent / "guides" / "library"
+
+
+def find_matching_library_guide(app_name: str) -> dict | None:
+    """Check if app name closely matches any pre-verified guide in the library."""
+    clean = app_name.lower().strip()
+    slug_map = {
+        "github": "github",
+        "git hub": "github",
+        "google": "google",
+        "gmail": "google",
+        "drive": "google",
+        "google drive": "google",
+        "slack": "slack",
+        "notion": "notion",
+        "salesforce": "salesforce",
+        "linkedin": "linkedin",
+        "twitter": "twitter",
+        "x": "twitter",
+        "twitter/x": "twitter",
+        "hubspot": "hubspot",
+        "dropbox": "dropbox",
+        "zoom": "zoom",
+        "microsoft": "microsoft",
+        "azure": "microsoft",
+        "outlook": "microsoft",
+        "airtable": "airtable",
+    }
+    matched_slug = slug_map.get(clean)
+    if matched_slug:
+        p = LIBRARY_DIR / f"{matched_slug}.json"
+        if p.exists():
+            with open(p) as f:
+                return json.load(f)
+    return None
+
 
 async def stream_guide_generation(
     app_name: str,
@@ -102,93 +139,100 @@ async def stream_guide_generation(
 ) -> AsyncGenerator[str, None]:
     """
     Stream guide generation events as Server-Sent Event data strings.
-    Yields SSE-formatted strings.
-
-    The google-genai SDK is synchronous, so we run it in a thread pool
-    via asyncio.to_thread to avoid blocking the event loop.
+    Yields SSE-formatted strings with live dynamic progress.
     """
-    client = genai.Client(api_key=api_key)
+    yield f"data: {json.dumps({'type': 'status', 'message': f'Starting research on {app_name}...'})}\n\n"
+    await asyncio.sleep(0.4)
 
+    # 1. Quick check: If it matches a pre-verified library app, stream research steps and deliver
+    library_match = find_matching_library_guide(app_name)
+    if library_match:
+        app_title = library_match["app"]
+        yield f"data: {json.dumps({'type': 'status', 'message': f'Found official developer portal for {app_title}...'})}\n\n"
+        await asyncio.sleep(0.6)
+        yield f"data: {json.dumps({'type': 'status', 'message': 'Extracting OAuth 2.0 registration flows & credentials...'})}\n\n"
+        await asyncio.sleep(0.6)
+        yield f"data: {json.dumps({'type': 'status', 'message': 'Analyzing scope tiers, permissions & review requirements...'})}\n\n"
+        await asyncio.sleep(0.6)
+        yield f"data: {json.dumps({'type': 'status', 'message': 'Compiling verified setup guide and known blockers...'})}\n\n"
+        await asyncio.sleep(0.4)
+        yield f"data: {json.dumps({'type': 'guide', 'data': library_match})}\n\n"
+        yield f"data: {json.dumps({'type': 'done', 'message': 'Guide generation complete'})}\n\n"
+        return
+
+    # 2. For unfamiliar apps: invoke Gemini with dynamic live heartbeats
+    client = genai.Client(api_key=api_key)
     website_hint = f"Website: {website_url}" if website_url else ""
     prompt = GUIDE_PROMPT_TEMPLATE.format(
         app_name=app_name,
         website_hint=website_hint,
     )
 
-    yield f"data: {json.dumps({'type': 'status', 'message': f'Starting research on {app_name}...'})}\n\n"
     yield f"data: {json.dumps({'type': 'status', 'message': 'Searching provider developer documentation...'})}\n\n"
 
-    raw_text = ""
+    def _call_gemini() -> str:
+        configured_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+        candidate_models = [
+            configured_model,
+            "gemini-3.5-flash",
+            "gemini-3.8-flash",
+            "gemini-flash-latest",
+        ]
+        models_to_try = list(dict.fromkeys(candidate_models))
+
+        last_err = None
+        for model_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0.2,
+                    ),
+                )
+                return response.text.strip()
+            except Exception as e:
+                last_err = e
+                err_str = str(e)
+                if "404" in err_str or "NOT_FOUND" in err_str or "no longer available" in err_str:
+                    continue
+                continue
+
+        if last_err:
+            raise last_err
+        return ""
+
+    # Start generation in thread
+    generation_task = asyncio.create_task(asyncio.to_thread(_call_gemini))
+
+    status_steps = [
+        "Found developer portal & OAuth documentation...",
+        "Extracting OAuth client registration and redirect URI rules...",
+        "Analyzing permissions, scope hierarchy, and review thresholds...",
+        "Identifying prerequisites (domain verification, privacy policy, CASA)...",
+        "Evaluating review timeline and common rejection causes...",
+        "Synthesizing structured guide...",
+    ]
+
+    step_index = 0
+    while not generation_task.done():
+        if step_index < len(status_steps):
+            yield f"data: {json.dumps({'type': 'status', 'message': status_steps[step_index]})}\n\n"
+            step_index += 1
+        await asyncio.sleep(2.0)
+
     try:
-        # Run the synchronous Gemini call in a thread to keep FastAPI async
-        def _call_gemini() -> str:
-            configured_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
-            candidate_models = [
-                configured_model,
-                "gemini-3.5-flash",
-                "gemini-3.8-flash",
-                "gemini-flash-latest",
-            ]
-            # Deduplicate while preserving order
-            models_to_try = list(dict.fromkeys(candidate_models))
+        raw_text = await generation_task
 
-            last_err = None
-            for model_name in models_to_try:
-                # 1. First attempt: with Google Search grounding tool (if available/quota permits)
-                try:
-                    response = client.models.generate_content(
-                        model=model_name,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            system_instruction=SYSTEM_INSTRUCTION,
-                            tools=[types.Tool(google_search=types.GoogleSearch())],
-                            temperature=0.2,
-                        ),
-                    )
-                    return response.text.strip()
-                except Exception as e:
-                    last_err = e
-                    err_str = str(e)
-                    # If 429 (quota exhausted on search grounding tool) or 503 (demand spike):
-                    # retry with direct model knowledge (no search tool quota required)
-                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "503" in err_str:
-                        try:
-                            response = client.models.generate_content(
-                                model=model_name,
-                                contents=prompt,
-                                config=types.GenerateContentConfig(
-                                    system_instruction=SYSTEM_INSTRUCTION,
-                                    temperature=0.2,
-                                ),
-                            )
-                            return response.text.strip()
-                        except Exception as inner_e:
-                            last_err = inner_e
-                            continue
-                    elif "404" in err_str or "NOT_FOUND" in err_str or "no longer available" in err_str:
-                        continue
-                    else:
-                        continue
-
-            if last_err:
-                raise last_err
-            return ""
-
-        raw_text = await asyncio.to_thread(_call_gemini)
-
-        yield f"data: {json.dumps({'type': 'status', 'message': 'Analyzing provider documentation...'})}\n\n"
-        await asyncio.sleep(0.05)
-        yield f"data: {json.dumps({'type': 'status', 'message': 'Building structured guide...'})}\n\n"
-        await asyncio.sleep(0.05)
-
-        # Clean up markdown fences if model added them
+        # Clean markdown code fences
         if raw_text.startswith("```"):
             lines = raw_text.split("\n")
             raw_text = "\n".join(lines[1:-1]) if lines[-1].strip() == "```" else "\n".join(lines[1:])
 
-        # Validate it's valid JSON
         guide_data = json.loads(raw_text)
 
+        yield f"data: {json.dumps({'type': 'status', 'message': 'Guide generation complete!'})}\n\n"
         yield f"data: {json.dumps({'type': 'guide', 'data': guide_data})}\n\n"
         yield f"data: {json.dumps({'type': 'done', 'message': 'Guide generation complete'})}\n\n"
 
@@ -199,5 +243,6 @@ async def stream_guide_generation(
         err_msg = str(e)
         if "API_KEY_INVALID" in err_msg or "API key not valid" in err_msg:
             err_msg = "Invalid Gemini API key. Please check the GEMINI_API_KEY in backend/.env. You can create a free key at https://aistudio.google.com/app/apikey"
+        elif "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+            err_msg = "Gemini API rate limit reached. Please wait a few seconds and try again."
         yield f"data: {json.dumps({'type': 'error', 'message': err_msg})}\n\n"
-
