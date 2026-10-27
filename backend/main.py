@@ -31,7 +31,10 @@ app.add_middleware(
 )
 
 LIBRARY_DIR = Path(__file__).parent / "guides" / "library"
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+def get_api_key() -> str:
+    """Retrieve the current GEMINI_API_KEY, reloading .env if needed."""
+    load_dotenv(override=True)
+    return os.getenv("GEMINI_API_KEY", "").strip()
 
 
 # ─── Guide Library ────────────────────────────────────────────────────────────
@@ -110,17 +113,18 @@ async def generate_guide(request: GenerateRequest):
     Stream guide generation for any app via SSE.
     Uses Gemini + Google Search to research and generate the guide in real time.
     """
-    if not GEMINI_API_KEY:
+    api_key = get_api_key()
+    if not api_key or api_key == "your_gemini_api_key_here":
         raise HTTPException(
-            status_code=503,
-            detail="GEMINI_API_KEY not configured. Set it in backend/.env"
+            status_code=400,
+            detail="GEMINI_API_KEY is not configured or still set to placeholder in backend/.env. Please get a free API key at https://aistudio.google.com/app/apikey and add it to backend/.env."
         )
 
     async def event_stream():
         async for chunk in stream_guide_generation(
             app_name=request.app_name,
             website_url=request.website_url,
-            api_key=GEMINI_API_KEY,
+            api_key=api_key,
         ):
             yield chunk
 

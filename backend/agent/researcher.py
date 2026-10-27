@@ -154,5 +154,8 @@ async def stream_guide_generation(
         yield f"data: {json.dumps({'type': 'error', 'message': f'Failed to parse guide JSON: {str(e)}'})}\n\n"
         yield f"data: {json.dumps({'type': 'raw', 'text': raw_text or 'No output'})}\n\n"
     except Exception as e:
-        yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        err_msg = str(e)
+        if "API_KEY_INVALID" in err_msg or "API key not valid" in err_msg:
+            err_msg = "Invalid Gemini API key. Please check the GEMINI_API_KEY in backend/.env. You can create a free key at https://aistudio.google.com/app/apikey"
+        yield f"data: {json.dumps({'type': 'error', 'message': err_msg})}\n\n"
 
