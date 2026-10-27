@@ -1,0 +1,125 @@
+{
+  "app": "Microsoft (Outlook / OneDrive / Teams)",
+  "slug": "microsoft",
+  "website": "microsoft.com",
+  "logo_url": "https://www.microsoft.com/favicon.ico",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "medium",
+  "setup_time_estimate": "1–3 hours",
+  "approval_time_estimate": "Instant for personal accounts; 2–5 days for organizational access",
+  "requires_approval": false,
+  "composio_managed_auth": true,
+  "summary": "Microsoft Azure AD / Entra ID OAuth (used for Outlook, OneDrive, Teams, and all Microsoft 365 services) is well-documented and works immediately for personal Microsoft accounts. Access to organizational (work/school) accounts requires tenant admin consent for certain scopes, which can add complexity. The Azure portal setup is comprehensive but has more steps than simpler providers. Composio provides managed auth for Microsoft services.",
+  "key_facts": [
+    "Personal Microsoft accounts can be connected immediately after app registration",
+    "Work/school accounts may require tenant admin consent for some scopes",
+    "App registration in Azure Portal (Entra ID) is self-service and immediate",
+    "Multi-tenant apps (personal + work accounts) require careful configuration",
+    "Some Graph API scopes require admin consent by default",
+    "Composio managed auth available for prototyping",
+    "Publisher verification badge helps build trust with enterprise users"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Register App in Azure Portal",
+      "description": "Go to portal.azure.com → Microsoft Entra ID → App registrations → New registration. Fill in app name. Under 'Supported account types', select 'Accounts in any organizational directory and personal Microsoft accounts' for the broadest reach. Add your redirect URI.",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade",
+      "warnings": [
+        "Account type selection cannot be easily changed later — choose carefully"
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Add Redirect URI",
+      "description": "In the app's Authentication section, add platform 'Web' and redirect URI: https://backend.composio.dev/api/v3/toolkits/auth/callback. Enable 'Access tokens' and 'ID tokens' under Implicit grant if needed.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://portal.azure.com",
+      "warnings": []
+    },
+    {
+      "number": 3,
+      "title": "Configure API Permissions",
+      "description": "Go to API permissions → Add a permission → Microsoft Graph. Add delegated permissions for your use case: Mail.Read, Calendars.Read, Files.Read, User.Read, etc. Note which scopes require admin consent (shown with shield icon).",
+      "agent_can_do": false,
+      "estimated_time": "20 minutes",
+      "url": "https://portal.azure.com",
+      "warnings": [
+        "Admin consent required scopes (like Mail.ReadWrite for all users) will block enterprise users until their tenant admin approves",
+        "Use the least privileged scopes possible"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Create Client Secret",
+      "description": "Go to Certificates & secrets → New client secret. Set an expiration (max 24 months). Copy the secret value immediately — it's only shown once. Note the Application (client) ID from the Overview page.",
+      "agent_can_do": false,
+      "estimated_time": "5 minutes",
+      "warnings": [
+        "Set a calendar reminder to rotate secrets before they expire — expired secrets break your integration"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Configure in Composio",
+      "description": "Use the Application (client) ID as Client ID and your client secret value. The tenant ID for multi-tenant apps is 'common'. Configure Composio custom auth config with toolkit='microsoft' (or specific toolkit like 'outlook').",
+      "agent_can_do": true,
+      "estimated_time": "10 minutes",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Free Microsoft account (personal) or Azure account (organizational apps)",
+    "needs_live_website": false,
+    "needs_privacy_policy": false,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["User.Read", "Mail.Read", "Calendars.Read", "Files.Read", "openid", "profile", "email", "offline_access"],
+    "restricted_scopes": ["Mail.ReadWrite.All", "Directory.ReadWrite.All", "RoleManagement.ReadWrite.Directory"]
+  },
+  "blockers": [
+    {
+      "title": "Admin Consent for Organizational Scopes",
+      "description": "Many Microsoft Graph scopes for reading org-level data require tenant admin consent. Individual users cannot grant these — their org's IT admin must approve your app for their tenant.",
+      "severity": "warning",
+      "workaround": "Stick to user-delegated scopes where possible. For scopes requiring admin consent, provide a separate admin consent URL that tenant admins can use to pre-approve your app."
+    },
+    {
+      "title": "Client Secret Expiration",
+      "description": "Azure client secrets expire (max 24 months). When they expire, your integration breaks for all users.",
+      "severity": "warning",
+      "workaround": "Use certificate-based authentication instead for production, or set up automated secret rotation with Azure Key Vault."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research Microsoft Entra ID app registration process",
+      "result": "Documented complete Azure Portal registration flow and Graph API permission model",
+      "status": "done"
+    },
+    {
+      "action": "Identify admin consent requirements for common scopes",
+      "result": "Found key admin-consent-required scopes and documented workaround approach",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Microsoft Identity Platform - Register an App",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app",
+      "type": "official_docs"
+    },
+    {
+      "title": "Microsoft Graph Permissions Reference",
+      "url": "https://learn.microsoft.com/en-us/graph/permissions-reference",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "verified",
+  "last_verified": "2025-01-15"
+}
+

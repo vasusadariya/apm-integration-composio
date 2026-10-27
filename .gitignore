@@ -1,0 +1,30 @@
+# OAuth Setup Guide Platform — .gitignore
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+
+# Environment secrets
+.env
+backend/.env
+frontend/.env.local
+
+# Build output
+.next/
+out/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+

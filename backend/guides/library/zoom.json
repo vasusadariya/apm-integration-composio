@@ -1,0 +1,133 @@
+{
+  "app": "Zoom",
+  "slug": "zoom",
+  "website": "zoom.us",
+  "logo_url": "https://st1.zoom.us/zoom.ico",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "hard",
+  "setup_time_estimate": "2–4 hours",
+  "approval_time_estimate": "3–10 business days (for publishable app)",
+  "requires_approval": true,
+  "composio_managed_auth": true,
+  "summary": "Zoom OAuth apps have two modes: unpublished (development/private) works immediately, while published apps (for any Zoom user) require Zoom's review. The setup involves the Zoom Marketplace developer portal and requires configuring scopes and redirect URIs. Zoom's review process focuses on app functionality, security practices, and use-case legitimacy. Privacy policy and terms of service are required for published apps.",
+  "key_facts": [
+    "Unpublished app works immediately for your Zoom account (development use only)",
+    "Published app (any Zoom user can install) requires Zoom's review: 3–10 business days",
+    "Zoom has a Marketplace model — published apps appear in zoom.us/apps",
+    "Two app types: User-managed OAuth (installs per user) and Account-level OAuth (installs for entire org)",
+    "Composio managed auth available for prototyping",
+    "Server-to-Server OAuth available for backend-only (no user consent) integrations"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create Zoom Developer Account",
+      "description": "Go to marketplace.zoom.us and sign in with your Zoom account. Navigate to Develop → Build App. You'll see app type options.",
+      "agent_can_do": false,
+      "estimated_time": "5 minutes",
+      "url": "https://marketplace.zoom.us/develop/create",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Create an OAuth App",
+      "description": "Select 'OAuth' as the app type. Choose whether it's User-managed (per-user installs) or Account-level (org-wide). Enter app name and select 'Published on Zoom App Marketplace' or 'Account-only' (for internal use, no review needed).",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://marketplace.zoom.us/develop/create",
+      "warnings": [
+        "Account-only apps require no review and work immediately — use for internal/enterprise integrations"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Configure App Information",
+      "description": "Fill in: App Name, Short Description, Long Description, Company Name, Developer Name/Email, and upload a 1:1 aspect ratio icon. Add redirect URI for OAuth: https://backend.composio.dev/api/v3/toolkits/auth/callback and add it to your allowlist.",
+      "agent_can_do": false,
+      "estimated_time": "30 minutes",
+      "warnings": [
+        "App icon must be square (1:1 ratio)"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Configure Scopes",
+      "description": "In the Scopes tab, add the permissions your app needs (e.g., meeting:read, meeting:write, user:read). Zoom's scope UI shows exactly what each scope enables.",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "warnings": [
+        "Some scopes require additional justification during the submission review"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Submit for Review (Published Apps)",
+      "description": "Complete all required fields (Privacy Policy URL, Terms of Use URL, support information). Click 'Submit' to send your app for Zoom's review. Track status in the developer portal.",
+      "agent_can_do": false,
+      "estimated_time": "1–2 hours to complete all fields",
+      "warnings": [
+        "Privacy policy and Terms of Use must be live URLs on your domain",
+        "Review takes 3–10 business days — Zoom may request changes"
+      ]
+    },
+    {
+      "number": 6,
+      "title": "Configure in Composio",
+      "description": "Retrieve Client ID and Client Secret from the App Credentials tab. Configure Composio custom auth config with toolkit='zoom'.",
+      "agent_can_do": true,
+      "estimated_time": "5 minutes",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Free Zoom account for development; any plan for published apps",
+    "needs_live_website": true,
+    "needs_privacy_policy": true,
+    "needs_terms_of_service": true,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["meeting:read:admin", "meeting:write:admin", "user:read:admin", "recording:read:admin"],
+    "restricted_scopes": ["billing:read:admin", "account:read:admin"]
+  },
+  "blockers": [
+    {
+      "title": "Privacy Policy and Terms of Service Required",
+      "description": "Both privacy policy and terms of service are mandatory for published app submission. Both must be live, accessible URLs.",
+      "severity": "blocking",
+      "workaround": "Prepare both documents and host them on your domain before starting the submission process."
+    },
+    {
+      "title": "All Form Fields Must Be Complete",
+      "description": "Zoom's submission form has many required fields (company info, support info, detailed descriptions). Incomplete submissions are rejected immediately.",
+      "severity": "warning",
+      "workaround": "Prepare all app metadata (descriptions, support links, icons) before starting submission."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research Zoom Marketplace developer app types",
+      "result": "Identified Account-level (no review) vs published (review required) paths",
+      "status": "done"
+    },
+    {
+      "action": "Check Composio managed auth for Zoom",
+      "result": "Confirmed Zoom is in Composio's managed auth directory",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Zoom OAuth App Creation",
+      "url": "https://developers.zoom.us/docs/integrations/create/",
+      "type": "official_docs"
+    },
+    {
+      "title": "Zoom Marketplace Submission Guidelines",
+      "url": "https://developers.zoom.us/docs/distribution/",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "source_supported",
+  "last_verified": "2025-01-15"
+}
+

@@ -1,0 +1,130 @@
+{
+  "app": "Twitter / X",
+  "slug": "twitter",
+  "website": "x.com",
+  "logo_url": "https://abs.twimg.com/favicons/twitter.2.ico",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "hard",
+  "setup_time_estimate": "1–3 hours",
+  "approval_time_estimate": "1–5 business days (Elevated or higher access)",
+  "requires_approval": true,
+  "composio_managed_auth": true,
+  "summary": "Twitter/X Developer API access has become significantly more restrictive since 2023. Free tier access is extremely limited (1,500 tweets/month write). Basic access (paid, ~$100/month) is needed for most practical integrations. Elevated access requires manual review. The OAuth 2.0 setup itself is straightforward — the bottleneck is the access tier approval and the ongoing cost. Your app needs to explain exactly what it does in the developer portal.",
+  "key_facts": [
+    "Free Developer Account: 1,500 tweet writes/month, 10,000 reads/month — very limited",
+    "Basic plan ($100/month): 3M tweet reads/month — needed for most real applications",
+    "Pro plan ($5,000/month) and Enterprise tiers exist for high-volume use",
+    "OAuth 2.0 (PKCE) is available for user-context actions; OAuth 1.0a still used for some endpoints",
+    "App must be approved before getting production credentials — developer portal review",
+    "Composio managed auth available, but your users need to authorize your app with their own accounts",
+    "API v1.1 endpoints are being deprecated — use v2 API"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Apply for Developer Access",
+      "description": "Go to developer.twitter.com and sign in with your Twitter/X account. Apply for developer access by describing your use case. You must explain: what you're building, how you'll use the API, whether you'll display tweets outside Twitter, and whether you'll analyze data.",
+      "agent_can_do": false,
+      "estimated_time": "30–45 minutes",
+      "url": "https://developer.twitter.com/en/portal/petition/essential/basic-info",
+      "warnings": [
+        "Be specific and honest — vague answers cause delays or rejection",
+        "Mentioning automation should be tied to clear user-serving purposes"
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Select Access Tier",
+      "description": "Choose your access tier: Free (very limited), Basic ($100/month), Pro ($5,000/month), or Enterprise. For most Composio integrations enabling user actions (reading timeline, posting tweets), Basic is the minimum practical tier.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://developer.twitter.com/en/portal/products",
+      "warnings": [
+        "Free tier is insufficient for most real applications — budget for at least Basic ($100/month)"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Create a Project and App",
+      "description": "In the Developer Portal, create a Project (container) and then create an App inside it. Configure: App name, description, app website URL, callback URLs. For Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": "https://developer.twitter.com/en/portal/apps/new",
+      "warnings": []
+    },
+    {
+      "number": 4,
+      "title": "Configure OAuth 2.0",
+      "description": "In your App settings, go to 'User authentication settings'. Enable OAuth 2.0. Set Type of App (Web App/Native App). Add callback URLs and website URL. Select required scopes (tweet.read, tweet.write, users.read, offline.access for refresh tokens).",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "warnings": [
+        "offline.access scope is required if you want refresh tokens for long-lived access"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Get API Keys and Configure Composio",
+      "description": "From App settings → Keys and tokens: get Client ID and Client Secret (for OAuth 2.0). Configure in Composio custom auth config with toolkit='twitter'.",
+      "agent_can_do": true,
+      "estimated_time": "10 minutes",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Twitter/X account + Developer Portal approval + paid plan for real usage",
+    "needs_live_website": true,
+    "needs_privacy_policy": true,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["tweet.read", "tweet.write", "users.read", "follows.read", "like.read", "offline.access"],
+    "restricted_scopes": ["dm.read", "dm.write", "block.read", "mute.read"]
+  },
+  "blockers": [
+    {
+      "title": "Paid Tier Required for Practical Use",
+      "description": "The Free tier limits of 1,500 tweets/month write and 10,000 reads/month make it insufficient for any real user-facing application. Basic plan costs $100/month.",
+      "severity": "blocking",
+      "workaround": "Budget for at least the Basic tier ($100/month). Evaluate if Twitter/X integration is worth the ongoing cost vs. user value."
+    },
+    {
+      "title": "Developer Portal Approval",
+      "description": "Applications must describe their use case in the Developer Portal. Automated, spam, or unclear use cases are rejected.",
+      "severity": "blocking",
+      "workaround": "Prepare a clear, detailed use-case description focusing on genuine user value, not automation."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research current Twitter/X API access tiers and pricing",
+      "result": "Documented current tier structure: Free/Basic($100)/Pro($5K) with associated limits",
+      "status": "done"
+    },
+    {
+      "action": "Verify OAuth 2.0 PKCE support on Twitter/X v2 API",
+      "result": "Confirmed OAuth 2.0 with PKCE available for v2 API endpoints",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Twitter/X Developer Portal",
+      "url": "https://developer.twitter.com/en/portal/dashboard",
+      "type": "official_docs"
+    },
+    {
+      "title": "Twitter OAuth 2.0 Documentation",
+      "url": "https://developer.twitter.com/en/docs/authentication/oauth-2-0",
+      "type": "official_docs"
+    },
+    {
+      "title": "Twitter API v2 Access Tiers",
+      "url": "https://developer.twitter.com/en/products/twitter-api",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "source_supported",
+  "last_verified": "2025-01-15"
+}
+

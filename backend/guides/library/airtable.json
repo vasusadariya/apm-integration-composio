@@ -1,0 +1,98 @@
+{
+  "app": "Airtable",
+  "slug": "airtable",
+  "website": "airtable.com",
+  "logo_url": "https://airtable.com/favicon.ico",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "easy",
+  "setup_time_estimate": "30–60 minutes",
+  "approval_time_estimate": "Instant (no approval needed)",
+  "requires_approval": false,
+  "composio_managed_auth": true,
+  "summary": "Airtable OAuth is one of the simplest integrations to set up. Creating an OAuth integration in the Airtable developer hub is self-service, instant, and requires no external review. Users connect their Airtable workspaces with granular permissions (they choose which bases to share). Airtable has excellent developer documentation. Composio also provides managed auth for Airtable.",
+  "key_facts": [
+    "No approval process — app goes live immediately after creation",
+    "Free Airtable account is sufficient",
+    "Users can select exactly which bases (databases) to share — granular permissions",
+    "Scopes are granular: per-table read/write/create/delete",
+    "OAuth integrations created in Airtable Developer Hub",
+    "Composio managed auth available for prototyping"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create an OAuth Integration",
+      "description": "Go to airtable.com/create/oauth and click 'Register an OAuth integration'. Enter your integration name, description, and client type (Web application). Add your redirect URI: https://backend.composio.dev/api/v3/toolkits/auth/callback for Composio.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://airtable.com/create/oauth",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Configure Scopes",
+      "description": "Select the scopes your app needs. Airtable uses granular scopes like data.records:read, data.records:write, schema.bases:read. Choose the minimum required scopes for your use case.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "warnings": [
+        "Users see all requested scopes during OAuth — fewer scopes increases trust and conversion"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Get Client Credentials",
+      "description": "After creation, your Client ID and Client Secret are shown in the integration settings. Copy these and configure in Composio custom auth config with toolkit='airtable'.",
+      "agent_can_do": true,
+      "estimated_time": "5 minutes",
+      "warnings": [
+        "Client Secret is sensitive — store securely"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Handle Base-Level Permissions",
+      "description": "During OAuth, users select which Airtable bases to share. Design your app's UX to help users select the right bases. After connection, you can only access the bases the user explicitly shared.",
+      "agent_can_do": false,
+      "estimated_time": "30–60 minutes to build UX",
+      "warnings": [
+        "Similar to Notion — users grant per-base access, not full account access",
+        "Build UX that clearly guides users through base selection"
+      ]
+    }
+  ],
+  "requirements": {
+    "account_type": "Free Airtable account",
+    "needs_live_website": false,
+    "needs_privacy_policy": false,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["data.records:read", "data.records:write", "data.recordComments:read", "schema.bases:read"],
+    "restricted_scopes": ["webhook:manage"]
+  },
+  "blockers": [
+    {
+      "title": "Per-Base Access Model",
+      "description": "Users grant access per Airtable base, not per account. If users forget to share a required base, your app won't see it.",
+      "severity": "warning",
+      "workaround": "Build clear setup instructions showing users exactly which bases to share. Consider detecting missing bases and prompting users to re-authorize with additional bases."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research Airtable OAuth integration creation process",
+      "result": "Confirmed instant self-service OAuth integration creation at airtable.com/create/oauth",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Airtable OAuth Integration Guide",
+      "url": "https://airtable.com/developers/web/guides/oauth-integrations",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "verified",
+  "last_verified": "2025-01-15"
+}
+

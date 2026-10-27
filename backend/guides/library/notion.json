@@ -1,0 +1,126 @@
+{
+  "app": "Notion",
+  "slug": "notion",
+  "website": "notion.so",
+  "logo_url": "https://www.notion.so/images/favicon.ico",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "medium",
+  "setup_time_estimate": "1–3 hours",
+  "approval_time_estimate": "1–5 business days (required for public integrations)",
+  "requires_approval": true,
+  "composio_managed_auth": true,
+  "summary": "Notion OAuth integrations are moderately complex. Internal integrations (for your own workspace) need no approval and work instantly. Public integrations (used by any Notion user) require Notion's review process, which takes 1–5 business days. Notion's OAuth is non-standard: users explicitly select which pages/databases to grant access to, and the integration only sees content the user explicitly shares. This is important to communicate to your users.",
+  "key_facts": [
+    "Internal integrations are instant — no review needed (but only work in your own workspace)",
+    "Public integrations (for other users) require Notion's review: 1–5 business days",
+    "Notion uses a unique permission model: users select specific pages to grant access, not entire workspaces",
+    "Your integration will NOT automatically see all user content — users must explicitly share pages",
+    "A live, public-facing website describing your integration is required for public review",
+    "Privacy policy required for public integration submission",
+    "Composio managed auth available for prototyping"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create a Notion Integration",
+      "description": "Go to notion.so/my-integrations and click '+ New integration'. Choose between Internal (your workspace only, instant) or Public (any user, requires review). Enter integration name and select the associated workspace.",
+      "agent_can_do": false,
+      "estimated_time": "5 minutes",
+      "url": "https://www.notion.so/my-integrations",
+      "warnings": [
+        "Start with Internal type for development — switch to Public only when ready to submit for review"
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Configure Integration Capabilities",
+      "description": "Set the content capabilities your integration needs: Read content, Update content, Insert content. Set User information access level. These become the permissions shown to users during OAuth.",
+      "agent_can_do": false,
+      "estimated_time": "5 minutes",
+      "warnings": [
+        "Request only the capabilities you genuinely need — Notion reviewers check for over-permissioning"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Configure OAuth Settings (Public integrations)",
+      "description": "In the OAuth Domain & URIs section, add your redirect URIs. For Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback. Add your integration's company/website information for the authorization screen.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://www.notion.so/my-integrations",
+      "warnings": []
+    },
+    {
+      "number": 4,
+      "title": "Build and Test Your Integration",
+      "description": "Use the Internal Secret (API key) from your integration page for development testing. Share specific test pages with your integration to verify it can read/write content correctly.",
+      "agent_can_do": false,
+      "estimated_time": "1–2 hours",
+      "warnings": [
+        "Remember: even in production, users must explicitly share pages — build UX that guides them through this"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Submit Public Integration for Review",
+      "description": "Once your integration is ready, switch to Public type and fill in all required fields: integration URL, privacy policy URL, support email, tagline, description, screenshots. Then submit for Notion's review.",
+      "agent_can_do": false,
+      "estimated_time": "1–2 hours",
+      "warnings": [
+        "Integration URL must be a live, public page explaining what your integration does",
+        "Screenshots must show real usage of your integration"
+      ]
+    }
+  ],
+  "requirements": {
+    "account_type": "Free Notion account works for internal integrations; any account works for public",
+    "needs_live_website": true,
+    "needs_privacy_policy": true,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["read_content", "update_content", "insert_content", "read_user_info_email", "read_user_info_without_email"],
+    "restricted_scopes": []
+  },
+  "blockers": [
+    {
+      "title": "User Must Manually Share Pages",
+      "description": "Notion's permission model means users grant access at the page/database level, not the workspace level. Your users will need to explicitly share each relevant page or database with your integration. This is unintuitive and a common source of user confusion.",
+      "severity": "warning",
+      "workaround": "Build clear UX with a setup checklist that walks users through sharing the right pages. Show screenshots/video of the sharing process."
+    },
+    {
+      "title": "Integration URL Required",
+      "description": "Public integration review requires a live website URL for your integration. Placeholder pages or localhost URLs will cause rejection.",
+      "severity": "blocking",
+      "workaround": "Deploy a simple landing page describing your integration before submitting for review."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research Notion integration types and OAuth flow",
+      "result": "Identified key distinction between Internal (instant) and Public (requires review) integration types",
+      "status": "done"
+    },
+    {
+      "action": "Investigate Notion's unique page-level permission model",
+      "result": "Confirmed users grant per-page access, not workspace access — critical UX consideration",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Notion OAuth Integration Guide",
+      "url": "https://developers.notion.com/docs/authorization",
+      "type": "official_docs"
+    },
+    {
+      "title": "Notion Public Integration Submission",
+      "url": "https://developers.notion.com/docs/getting-started#public-integration",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "verified",
+  "last_verified": "2025-01-15"
+}
+

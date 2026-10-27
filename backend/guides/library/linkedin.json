@@ -1,0 +1,135 @@
+{
+  "app": "LinkedIn",
+  "slug": "linkedin",
+  "website": "linkedin.com",
+  "logo_url": "https://static.licdn.com/sc/h/al2o9zrvru7aqj8e1x2rzsrca",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "hard",
+  "setup_time_estimate": "2–4 hours",
+  "approval_time_estimate": "1–4 weeks (API product access approval required)",
+  "requires_approval": true,
+  "composio_managed_auth": false,
+  "summary": "LinkedIn OAuth has a unique tiered API product access model. Basic OAuth for sign-in works easily, but any meaningful data access (posting, reading connections, company data) requires applying for specific 'Products' within LinkedIn's Developer Portal — each with its own approval process taking 1–4 weeks. LinkedIn is one of the most restrictive platforms: many API capabilities are available only to Marketing Partners or require specific use-case justification.",
+  "key_facts": [
+    "Basic OAuth (sign in with LinkedIn, read basic profile) is self-service",
+    "Any advanced access (posting, reading connections, company pages) requires Product approval",
+    "LinkedIn's approval is use-case based — they want to know specifically what you're building",
+    "Marketing API and company data requires LinkedIn Marketing Partner status (very restrictive)",
+    "Composio does NOT have managed auth for LinkedIn — you must create your own app",
+    "Rate limits on LinkedIn APIs are very strict even with approval",
+    "API terms prohibit scraping, bulk messaging, and automated connection requests"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create a LinkedIn App",
+      "description": "Go to linkedin.com/developers and click 'Create app'. You must associate the app with a LinkedIn Company Page (you must be an admin of that page). Fill in app name, description, logo, and select 'Legal Agreement'.",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": "https://www.linkedin.com/developers/apps/new",
+      "warnings": [
+        "You MUST have a LinkedIn Company Page — create one first if you don't have one",
+        "Use your company name, not personal name, for the app"
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Configure OAuth 2.0 Settings",
+      "description": "In your app's Auth tab, add Authorized Redirect URLs. For Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback. You can also find your Client ID and Client Secret here.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://www.linkedin.com/developers/apps",
+      "warnings": []
+    },
+    {
+      "number": 3,
+      "title": "Request API Products",
+      "description": "In your app's Products tab, you'll see available API Products. 'Sign In with LinkedIn using OpenID Connect' is available immediately. For other capabilities, click 'Request access' on the relevant product and complete the form explaining your use case.",
+      "agent_can_do": false,
+      "estimated_time": "1–2 hours",
+      "url": "https://www.linkedin.com/developers/apps",
+      "warnings": [
+        "Be very specific and honest about your use case — vague descriptions are rejected",
+        "LinkedIn reads these carefully; marketing-speak without technical detail causes delays"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Wait for Product Access Approval",
+      "description": "LinkedIn reviews product access requests manually. Typical wait: 1–4 weeks. You may receive follow-up questions or be denied with suggestions to apply for a different product. Monitor your email and LinkedIn developer notifications.",
+      "agent_can_do": false,
+      "estimated_time": "1–4 weeks wait",
+      "warnings": [
+        "Approval is not guaranteed — LinkedIn denies many requests that don't fit their use-case criteria",
+        "There's no appeal process — if denied, you can reapply after addressing their concerns"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Configure in Composio with Approved Scopes",
+      "description": "Once products are approved, configure your Composio auth config with the LinkedIn Client ID, Client Secret, and the scopes corresponding to your approved products.",
+      "agent_can_do": true,
+      "estimated_time": "10 minutes",
+      "warnings": [
+        "Requesting scopes beyond your approved products will cause OAuth errors"
+      ]
+    }
+  ],
+  "requirements": {
+    "account_type": "LinkedIn account + Company Page (free; must be Company Page admin)",
+    "needs_live_website": true,
+    "needs_privacy_policy": true,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["openid", "profile", "email", "w_member_social"],
+    "restricted_scopes": ["r_fullprofile", "r_network", "r_emailaddress", "rw_company_admin", "w_organization_social"]
+  },
+  "blockers": [
+    {
+      "title": "Company Page Requirement",
+      "description": "You cannot create a LinkedIn app without associating it with a LinkedIn Company Page of which you are an admin. Sole proprietors or individual developers must create a Company Page first.",
+      "severity": "blocking",
+      "workaround": "Create a LinkedIn Company Page for your project/company before starting app setup. This takes 10–15 minutes."
+    },
+    {
+      "title": "Approval Not Guaranteed",
+      "description": "LinkedIn manually reviews all API product access requests. Requests that don't clearly fit LinkedIn's allowed use cases are denied. Common denials: automated messaging, data harvesting, competitive intelligence.",
+      "severity": "blocking",
+      "workaround": "Review LinkedIn's API Terms of Service and permitted use cases before applying. Frame your use case precisely around the specific product capabilities you need."
+    },
+    {
+      "title": "No Composio Managed Auth",
+      "description": "Unlike GitHub, Google, and Slack, LinkedIn is not available in Composio's managed auth directory. You must create your own LinkedIn app and get it approved.",
+      "severity": "warning",
+      "workaround": "Proceed with direct LinkedIn app creation — there's no shortcut here."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research LinkedIn Developer API product tiers",
+      "result": "Found that LinkedIn uses a Product-based access model with separate approval per capability",
+      "status": "done"
+    },
+    {
+      "action": "Check Composio managed auth for LinkedIn",
+      "result": "Confirmed LinkedIn is NOT in Composio's managed auth directory",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "LinkedIn Developer Platform Overview",
+      "url": "https://developer.linkedin.com",
+      "type": "official_docs"
+    },
+    {
+      "title": "LinkedIn OAuth 2.0 Authorization",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "source_supported",
+  "last_verified": "2025-01-15"
+}
+

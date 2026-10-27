@@ -1,0 +1,179 @@
+{
+  "app": "Google (Gmail / Drive / Calendar)",
+  "slug": "google",
+  "website": "google.com",
+  "logo_url": "https://www.google.com/favicon.ico",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "very_hard",
+  "setup_time_estimate": "4–8 hours of active work",
+  "approval_time_estimate": "4–6 weeks (if sensitive scopes required)",
+  "requires_approval": true,
+  "composio_managed_auth": true,
+  "summary": "Google OAuth is the most complex setup in the ecosystem for any app requesting sensitive scopes (Gmail, Drive, Calendar data stored on external servers). Basic read-only scopes can be approved within a few days. However, requesting write access to Gmail or full Drive access from external users triggers Google's CASA Tier 2 security assessment — a mandatory third-party audit costing $4,000–$75,000 and taking 4–6 weeks minimum. Composio provides managed auth for Google to bypass this for prototyping.",
+  "key_facts": [
+    "Two distinct approval tracks: basic scopes (days) vs sensitive/restricted scopes (weeks + security audit)",
+    "CASA Tier 2 audit required for restricted scopes — cost starts around $4,000",
+    "Your app will be stuck in 'Testing' mode (100-user limit) until verification completes",
+    "Users see a scary 'This app isn't verified' warning in testing mode",
+    "A live website, privacy policy, and terms of service are mandatory before submission",
+    "Composio managed auth available — strongly recommended for prototyping and early users",
+    "Google reviews consent screen videos — record a clear walkthrough of your auth flow"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create a Google Cloud Project",
+      "description": "Go to Google Cloud Console → Create Project. Use a dedicated project for your OAuth app (separate from other GCP usage). Enable the specific APIs you need (e.g., Gmail API, Google Drive API, Google Calendar API) under APIs & Services → Library.",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": "https://console.cloud.google.com/projectcreate",
+      "warnings": [
+        "Create separate projects for development and production",
+        "Enable only the APIs you actually use — each unused enabled API is a liability during review"
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Configure OAuth Consent Screen",
+      "description": "In APIs & Services → OAuth consent screen, select 'External' (for users outside your org). Fill in: App name, user support email, app logo (512x512px PNG), app homepage URL, privacy policy URL, terms of service URL, and authorized domains. Add the scopes your app needs.",
+      "agent_can_do": false,
+      "estimated_time": "30 minutes",
+      "url": "https://console.cloud.google.com/apis/credentials/consent",
+      "warnings": [
+        "Homepage, privacy policy, and ToS must be live public URLs — not localhost or placeholder pages",
+        "App logo must be exactly 512x512 pixels PNG",
+        "Authorized domains must be domains you own (verified in Google Search Console)"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Create OAuth 2.0 Credentials",
+      "description": "Go to APIs & Services → Credentials → Create Credentials → OAuth client ID. Select 'Web application'. Add authorized JavaScript origins (your app domain) and authorized redirect URIs. For Composio, add: https://backend.composio.dev/api/v3/toolkits/auth/callback",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://console.cloud.google.com/apis/credentials",
+      "warnings": []
+    },
+    {
+      "number": 4,
+      "title": "Test in Development Mode",
+      "description": "While in 'Testing' publishing status, add test user emails (up to 100) in the OAuth consent screen settings. Only these users can authenticate. Your app works but users see an 'unverified app' warning screen.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "warnings": [
+        "Users outside your test list cannot authenticate at all — plan this carefully for beta testing"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Determine Your Scope Tier",
+      "description": "Review your requested scopes against Google's scope classification. Non-sensitive scopes (email, profile, openid) → fast approval (days). Sensitive scopes (contacts.readonly, calendar.readonly) → manual review (days to 1 week). Restricted scopes (gmail.modify, drive) → CASA security assessment (4–6 weeks, $4K+ cost).",
+      "agent_can_do": true,
+      "estimated_time": "30 minutes",
+      "url": "https://developers.google.com/identity/protocols/oauth2/scopes",
+      "warnings": [
+        "Requesting ANY restricted scope puts your entire app into the CASA audit track",
+        "Consider if read-only scopes satisfy your use case to avoid the restricted track"
+      ]
+    },
+    {
+      "number": 6,
+      "title": "Prepare Verification Assets",
+      "description": "Record a short video (2–5 min, unlisted YouTube) showing: user visiting your app → clicking 'Sign in with Google' → seeing OAuth consent screen → granting permissions → landing back in your app. This is mandatory for verification submission.",
+      "agent_can_do": false,
+      "estimated_time": "1–2 hours",
+      "warnings": [
+        "Video must show the complete OAuth flow clearly — blurry or cut-off videos cause rejection"
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Submit for Verification",
+      "description": "Change publishing status from 'Testing' to 'In production' and click 'Submit for verification'. Complete Google's verification questionnaire: describe your app, explain why each scope is needed, provide your demo video URL, and submit.",
+      "agent_can_do": false,
+      "estimated_time": "1–2 hours",
+      "warnings": [
+        "If requesting restricted scopes, you'll be directed to complete a CASA Tier 2 assessment before Google reviews your app"
+      ]
+    },
+    {
+      "number": 8,
+      "title": "Complete CASA Assessment (if restricted scopes)",
+      "description": "If your app needs restricted scopes, hire an approved CASA assessor from Google's partner list. They conduct a security assessment of your application. Costs range from $4,000 to $75,000+ depending on app complexity. Timeline: 4–6 weeks.",
+      "agent_can_do": false,
+      "estimated_time": "4–6 weeks",
+      "url": "https://appdefensealliance.dev/casa",
+      "warnings": [
+        "This is a mandatory step — there is no workaround for restricted scopes targeting external users",
+        "Budget both time and money for this step well in advance"
+      ]
+    }
+  ],
+  "requirements": {
+    "account_type": "Free Google account sufficient for setup; CASA audit cost is the real barrier",
+    "needs_live_website": true,
+    "needs_privacy_policy": true,
+    "needs_terms_of_service": true,
+    "needs_video_demo": true,
+    "needs_security_audit": true,
+    "allowed_scopes": ["email", "profile", "openid", "calendar.readonly", "contacts.readonly"],
+    "restricted_scopes": ["gmail.modify", "gmail.compose", "drive", "drive.file", "mail.google.com"]
+  },
+  "blockers": [
+    {
+      "title": "CASA Security Audit (Restricted Scopes)",
+      "description": "Apps requesting restricted scopes (Gmail write, full Drive access) must complete a CASA Tier 2 assessment before Google will approve verification. This costs $4,000–$75,000+ and takes 4–6 weeks.",
+      "severity": "blocking",
+      "workaround": "Use read-only scopes where possible. Use Composio managed auth to avoid this entirely during prototyping. For production, either budget for the audit or scope down your permission requirements."
+    },
+    {
+      "title": "100-User Limit in Testing Mode",
+      "description": "Until verified, your app can only authenticate up to 100 pre-approved test users. Attempting to authenticate other users results in an error.",
+      "severity": "blocking",
+      "workaround": "Add all team members and beta users to the test users list. Use Composio managed auth for early customer testing."
+    },
+    {
+      "title": "Domain Ownership Verification",
+      "description": "Authorized domains in your consent screen must be domains you control, verified through Google Search Console. Localhost and unverified domains are rejected.",
+      "severity": "blocking",
+      "workaround": "Verify your production domain in Google Search Console before starting the consent screen setup."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research Google OAuth scope tiers and approval requirements",
+      "result": "Documented three-tier scope system: non-sensitive, sensitive, restricted — with distinct approval paths",
+      "status": "done"
+    },
+    {
+      "action": "Find CASA assessment requirements and cost range",
+      "result": "Identified CASA Tier 2 as mandatory for restricted scopes; cost $4K–$75K from approved assessors",
+      "status": "done"
+    },
+    {
+      "action": "Verify Composio managed auth support for Google",
+      "result": "Confirmed Google (Gmail, Drive, Calendar) is in Composio's managed auth directory",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Google OAuth 2.0 Scopes Reference",
+      "url": "https://developers.google.com/identity/protocols/oauth2/scopes",
+      "type": "official_docs"
+    },
+    {
+      "title": "Google OAuth App Verification Policy",
+      "url": "https://support.google.com/cloud/answer/9110914",
+      "type": "official_docs"
+    },
+    {
+      "title": "CASA (Cloud Application Security Assessment)",
+      "url": "https://appdefensealliance.dev/casa",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "verified",
+  "last_verified": "2025-01-15"
+}
+

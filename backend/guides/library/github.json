@@ -1,0 +1,128 @@
+{
+  "app": "GitHub",
+  "slug": "github",
+  "website": "github.com",
+  "logo_url": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "easy",
+  "setup_time_estimate": "30–60 minutes",
+  "approval_time_estimate": "Instant (no approval needed)",
+  "requires_approval": false,
+  "composio_managed_auth": true,
+  "summary": "GitHub OAuth apps are the simplest to set up in the ecosystem. Registration is entirely self-service through your GitHub account settings — no external review, no approval queue. Your app is ready to use the moment you save it. Composio also provides managed auth for GitHub, meaning you can prototype without any setup at all.",
+  "key_facts": [
+    "No approval or review process — goes live immediately",
+    "Free GitHub account is sufficient; no paid plan needed",
+    "Callback URLs must be exact matches (no wildcards in production)",
+    "Personal OAuth apps live under user settings; team apps should be owned by a GitHub Organization",
+    "Rate limits are shared across all users of your app — plan accordingly",
+    "Composio managed auth available: prototype without registering your own app"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Navigate to OAuth App Registration",
+      "description": "Go to GitHub Settings → Developer settings → OAuth Apps → 'New OAuth App'. If building for a team, use your GitHub Organization's settings instead to ensure the app is org-owned.",
+      "agent_can_do": false,
+      "estimated_time": "2 minutes",
+      "url": "https://github.com/settings/developers",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Fill in Application Details",
+      "description": "Enter: Application name (shown to users on consent screen), Homepage URL (your app's URL), Application description (optional but recommended), and Authorization callback URL (e.g., https://backend.composio.dev/api/v3/toolkits/auth/callback if using Composio). The callback URL must be an exact HTTPS URL.",
+      "agent_can_do": false,
+      "estimated_time": "5 minutes",
+      "url": "https://github.com/settings/applications/new",
+      "warnings": [
+        "The callback URL must match exactly — GitHub does not support wildcards",
+        "For Composio integration, use: https://backend.composio.dev/api/v3/toolkits/auth/callback"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Register the Application",
+      "description": "Click 'Register application'. GitHub immediately creates your OAuth app and shows your Client ID. The app is live at this point.",
+      "agent_can_do": false,
+      "estimated_time": "1 minute",
+      "warnings": []
+    },
+    {
+      "number": 4,
+      "title": "Generate Client Secret",
+      "description": "On the app settings page, click 'Generate a new client secret'. Copy it immediately — GitHub will never show it again. Store it securely (environment variable, secrets manager).",
+      "agent_can_do": false,
+      "estimated_time": "2 minutes",
+      "warnings": [
+        "Client secret is shown only once — copy it before leaving the page",
+        "Never commit client secret to source control"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Configure in Composio",
+      "description": "In Composio, create a custom auth config: set toolkit='github', type='use_custom_auth', auth_scheme='OAUTH2', and provide your client_id and client_secret. Set oauth_redirect_uri to Composio's callback URL.",
+      "agent_can_do": true,
+      "estimated_time": "5 minutes",
+      "url": "https://app.composio.dev",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Free GitHub account (individual) or GitHub Organization (for org-owned apps)",
+    "needs_live_website": false,
+    "needs_privacy_policy": false,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["repo", "read:user", "user:email", "read:org", "gist", "notifications"],
+    "restricted_scopes": ["delete_repo", "admin:org", "admin:repo_hook"]
+  },
+  "blockers": [
+    {
+      "title": "Callback URL mismatch",
+      "description": "GitHub requires exact callback URL matches. If your URL doesn't match exactly (including trailing slashes), the OAuth flow will fail with a 'redirect_uri_mismatch' error.",
+      "severity": "blocking",
+      "workaround": "Add all needed callback URLs in the app settings. You can add up to 10 callback URLs."
+    },
+    {
+      "title": "Rate limits on shared apps",
+      "description": "All users of your GitHub OAuth app share the same rate limit pool (5,000 requests/hour per user token, but secondary limits apply to the app level).",
+      "severity": "warning",
+      "workaround": "Implement request caching and respect rate limit headers (X-RateLimit-*)."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research GitHub OAuth documentation",
+      "result": "Found complete OAuth app documentation at docs.github.com/en/apps/oauth-apps",
+      "status": "done"
+    },
+    {
+      "action": "Verify Composio managed auth support for GitHub",
+      "result": "Confirmed GitHub is in Composio's managed auth directory",
+      "status": "done"
+    },
+    {
+      "action": "Identify callback URL for Composio integration",
+      "result": "Found: https://backend.composio.dev/api/v3/toolkits/auth/callback",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "GitHub OAuth Apps Documentation",
+      "url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app",
+      "type": "official_docs"
+    },
+    {
+      "title": "Composio Auth Config Documentation",
+      "url": "https://docs.composio.dev/toolkits/managed-auth",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "verified",
+  "last_verified": "2025-01-15"
+}
+

@@ -1,0 +1,141 @@
+{
+  "app": "Salesforce",
+  "slug": "salesforce",
+  "website": "salesforce.com",
+  "logo_url": "https://www.salesforce.com/favicon.ico",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "hard",
+  "setup_time_estimate": "3–6 hours",
+  "approval_time_estimate": "1–3 weeks (for AppExchange listing; direct OAuth is immediate)",
+  "requires_approval": false,
+  "composio_managed_auth": true,
+  "summary": "Salesforce OAuth setup is technically complex but functional without approval for direct integrations. You create a 'Connected App' in Salesforce Setup — this works immediately for connecting user accounts. If you want to distribute through the Salesforce AppExchange (marketplace), that's a separate multi-week security review process requiring a Salesforce Partner account. Most Composio integrations only need the direct Connected App approach.",
+  "key_facts": [
+    "Connected App registration is self-service and works immediately — no wait time for direct OAuth",
+    "AppExchange listing (optional marketplace) requires Salesforce security review: 1–3 weeks",
+    "Users need a Salesforce org (instance) — there's no single Salesforce login like Google",
+    "Each Salesforce org may have different OAuth policies set by their admin — your app may be blocked",
+    "Salesforce uses instance-specific URLs (e.g., mycompany.my.salesforce.com) — impacts redirect URI config",
+    "Composio managed auth available for prototyping"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Get Salesforce Developer Account",
+      "description": "Sign up for a free Salesforce Developer Edition org at developer.salesforce.com. This is a fully functional Salesforce instance for development. You'll need this to create and test your Connected App.",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": "https://developer.salesforce.com/signup",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Create a Connected App",
+      "description": "In Salesforce Setup (gear icon → Setup), search for 'App Manager' → 'New Connected App'. Fill in: Connected App Name, API Name (auto-filled), Contact Email. Check 'Enable OAuth Settings'.",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": "https://login.salesforce.com",
+      "warnings": [
+        "The Connected App belongs to the org where it's created — use your Developer Edition org"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Configure OAuth Settings",
+      "description": "In the OAuth settings section: add your callback URL (for Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback). Select OAuth scopes: 'Access and manage your data (api)', 'Perform requests on your behalf at any time (refresh_token)', and any others needed. Save the Connected App.",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "warnings": [
+        "Salesforce takes 2–10 minutes to activate a new Connected App after saving",
+        "The 'refresh_token' scope is needed for long-term access — don't forget it"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Retrieve Client Credentials",
+      "description": "After saving, view the Connected App. Go to 'Manage Consumer Details' to see the Consumer Key (Client ID) and Consumer Secret. Copy these carefully.",
+      "agent_can_do": false,
+      "estimated_time": "5 minutes",
+      "warnings": [
+        "Consumer Secret is sensitive — treat like a password",
+        "If you lose it, you must generate a new one (invalidating the old)"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Handle Multi-Instance Complexity",
+      "description": "Salesforce users log in to different instances (login.salesforce.com, test.salesforce.com for sandboxes, or custom domains). Configure your OAuth flow to use login.salesforce.com as the auth endpoint, which automatically routes to the user's correct instance.",
+      "agent_can_do": true,
+      "estimated_time": "30 minutes",
+      "warnings": [
+        "Never hardcode a specific instance URL — always use login.salesforce.com for the auth flow",
+        "Sandbox orgs use test.salesforce.com — maintain separate Connected Apps for sandbox and production"
+      ]
+    },
+    {
+      "number": 6,
+      "title": "Configure in Composio",
+      "description": "Create a Composio custom auth config with toolkit='salesforce', your Consumer Key and Consumer Secret. Set the token URL and auth URL to Salesforce's OAuth endpoints.",
+      "agent_can_do": true,
+      "estimated_time": "10 minutes",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Free Salesforce Developer Edition sufficient for setup and testing",
+    "needs_live_website": false,
+    "needs_privacy_policy": false,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["api", "refresh_token", "offline_access", "openid", "profile", "email"],
+    "restricted_scopes": ["full", "admin"]
+  },
+  "blockers": [
+    {
+      "title": "Salesforce Org Admin Controls",
+      "description": "Each Salesforce org's admin can block third-party OAuth apps or require approval for Connected Apps. Users may be unable to connect even if your Connected App is set up correctly.",
+      "severity": "warning",
+      "workaround": "Document that users may need to request their Salesforce admin to allow your Connected App. Provide guidance for admins."
+    },
+    {
+      "title": "New Connected App Activation Delay",
+      "description": "After creating a Connected App, Salesforce takes 2–10 minutes to activate it. OAuth attempts during this window will fail.",
+      "severity": "warning",
+      "workaround": "Wait 10 minutes after creating the Connected App before testing."
+    },
+    {
+      "title": "Instance URL Complexity",
+      "description": "Salesforce's multi-instance architecture means users authenticate to different URLs. If not handled correctly, tokens may not work with the user's actual data endpoint.",
+      "severity": "warning",
+      "workaround": "Always use login.salesforce.com for auth; extract the instance URL from the token response (it's included in the JSON response) and use it for subsequent API calls."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research Salesforce Connected App setup process",
+      "result": "Found full setup path through Salesforce Developer documentation",
+      "status": "done"
+    },
+    {
+      "action": "Identify multi-instance URL complexity",
+      "result": "Documented the login.salesforce.com approach and instance URL extraction pattern",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Salesforce Connected App OAuth Guide",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.connected_app_create_api_integration.htm",
+      "type": "official_docs"
+    },
+    {
+      "title": "Salesforce OAuth 2.0 Web Server Flow",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_web_server_flow.htm",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "verified",
+  "last_verified": "2025-01-15"
+}
+

@@ -1,0 +1,133 @@
+{
+  "app": "Slack",
+  "slug": "slack",
+  "website": "slack.com",
+  "logo_url": "https://a.slack-edge.com/80588/marketing/img/icons/icon_slack_hash_colored.png",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "medium",
+  "setup_time_estimate": "1–2 hours",
+  "approval_time_estimate": "1–7 days (only if listing in Slack App Directory)",
+  "requires_approval": false,
+  "composio_managed_auth": true,
+  "summary": "Slack OAuth apps are straightforward to create and deploy. Any Slack app can be installed into workspaces without approval — you only need App Directory review if you want public listing in Slack's marketplace. The main complexity is understanding Slack's permission model (Bot Token Scopes vs User Token Scopes) and correctly configuring event subscriptions and redirect URLs. Composio provides managed auth for Slack.",
+  "key_facts": [
+    "No approval needed for workspace-level distribution — your app works immediately",
+    "App Directory listing (optional marketplace) requires Slack's review: 1–7 days",
+    "Two token types: Bot Tokens (app identity) and User Tokens (act as a user) — understand the difference",
+    "Redirect URLs must be HTTPS and exact matches",
+    "Socket Mode available for development (no public URL needed)",
+    "Composio managed auth available for prototyping without your own app"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create a Slack App",
+      "description": "Go to api.slack.com/apps and click 'Create New App'. Choose 'From scratch' (not a manifest). Name your app and select the development workspace. This creates the app immediately.",
+      "agent_can_do": false,
+      "estimated_time": "5 minutes",
+      "url": "https://api.slack.com/apps/new",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Configure OAuth & Permissions",
+      "description": "In the sidebar, go to OAuth & Permissions. Under 'Redirect URLs', add your callback URL (for Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback). Then scroll down and add the Bot Token Scopes your app needs (e.g., channels:read, chat:write, users:read).",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": "https://api.slack.com/apps",
+      "warnings": [
+        "Bot scopes control what your app can do; User scopes control what it can do on behalf of a user — add only what you need",
+        "You cannot remove scopes after users install the app without forcing re-authentication"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Enable and Install the App",
+      "description": "Go to 'Install App' in the sidebar and click 'Install to Workspace'. This goes through Slack's OAuth flow for your development workspace, giving you a Bot User OAuth Token and optionally a User OAuth Token.",
+      "agent_can_do": false,
+      "estimated_time": "5 minutes",
+      "warnings": []
+    },
+    {
+      "number": 4,
+      "title": "Retrieve App Credentials",
+      "description": "Go to Basic Information → App Credentials. Copy your Client ID and Client Secret. These are used to configure the OAuth flow for other workspaces installing your app.",
+      "agent_can_do": false,
+      "estimated_time": "2 minutes",
+      "warnings": [
+        "Signing Secret is separate from Client Secret — used to verify incoming requests from Slack"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Configure in Composio",
+      "description": "Create a Composio custom auth config with toolkit='slack', your Client ID and Client Secret, and the Composio redirect URI. Your app can now be used to connect user Slack accounts.",
+      "agent_can_do": true,
+      "estimated_time": "5 minutes",
+      "warnings": []
+    },
+    {
+      "number": 6,
+      "title": "(Optional) Submit to Slack App Directory",
+      "description": "If you want public listing in the Slack App Directory (millions of workspaces), go to Manage Distribution → Submit for Review. You'll need a support URL, privacy policy, detailed descriptions, and the app must pass Slack's security review.",
+      "agent_can_do": false,
+      "estimated_time": "2–4 hours to prepare submission",
+      "url": "https://api.slack.com/distribution",
+      "warnings": [
+        "App Directory listing is optional — your app works perfectly without it",
+        "Review can take 1–7 business days"
+      ]
+    }
+  ],
+  "requirements": {
+    "account_type": "Free Slack workspace sufficient for development",
+    "needs_live_website": false,
+    "needs_privacy_policy": true,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["channels:read", "chat:write", "users:read", "files:read", "reactions:read"],
+    "restricted_scopes": ["admin", "admin.conversations:write", "admin.users:write"]
+  },
+  "blockers": [
+    {
+      "title": "HTTPS Required for Redirect URLs",
+      "description": "Slack requires HTTPS redirect URLs in production. HTTP and localhost are only allowed in development/testing mode.",
+      "severity": "blocking",
+      "workaround": "Use ngrok or similar tunneling for local development testing."
+    },
+    {
+      "title": "Admin Scopes Require Paid Plan",
+      "description": "Admin-level scopes (admin.*) are only available for Slack Enterprise Grid plans, which are expensive enterprise tier.",
+      "severity": "warning",
+      "workaround": "Redesign integration to use user-level scopes instead of admin scopes where possible."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research Slack OAuth scopes and permission model",
+      "result": "Documented Bot vs User token distinction, key scopes, and Admin scope restrictions",
+      "status": "done"
+    },
+    {
+      "action": "Find Slack App Directory submission requirements",
+      "result": "Confirmed privacy policy, support URL, and security review required for marketplace listing",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Slack OAuth 2.0 Documentation",
+      "url": "https://api.slack.com/authentication/oauth-v2",
+      "type": "official_docs"
+    },
+    {
+      "title": "Slack App Distribution Guide",
+      "url": "https://api.slack.com/distribution",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "verified",
+  "last_verified": "2025-01-15"
+}
+

@@ -1,0 +1,102 @@
+{
+  "app": "HubSpot",
+  "slug": "hubspot",
+  "website": "hubspot.com",
+  "logo_url": "https://www.hubspot.com/favicon.ico",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "medium",
+  "setup_time_estimate": "1–2 hours",
+  "approval_time_estimate": "2–5 business days (for App Marketplace listing)",
+  "requires_approval": false,
+  "composio_managed_auth": true,
+  "summary": "HubSpot OAuth apps are developer-friendly. Creating a private app or public app in HubSpot's developer portal is self-service and works immediately for direct installations. The App Marketplace (for public listing) requires HubSpot's review, taking 2–5 business days, but is optional. HubSpot has clear documentation and a good developer experience. Composio provides managed auth for HubSpot.",
+  "key_facts": [
+    "Direct OAuth installation works immediately — no approval needed",
+    "Marketplace listing is optional and requires 2–5 day review",
+    "Free HubSpot Developer account is available",
+    "HubSpot apps use scopes tied to CRM objects (contacts, deals, companies)",
+    "Test installs can use a HubSpot developer test account (sandbox)",
+    "Composio managed auth available for prototyping"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create HubSpot Developer Account",
+      "description": "Sign up at developers.hubspot.com. This gives you a developer account separate from a regular HubSpot account, with access to test portals and the App Marketplace tools.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://developers.hubspot.com",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Create a New App",
+      "description": "In the developer account, go to Apps → Create app. Fill in app name, description, and logo. Under Auth tab, configure: Redirect URLs (add https://backend.composio.dev/api/v3/toolkits/auth/callback for Composio), and select required scopes.",
+      "agent_can_do": false,
+      "estimated_time": "20 minutes",
+      "url": "https://developers.hubspot.com/apps",
+      "warnings": []
+    },
+    {
+      "number": 3,
+      "title": "Configure Required Scopes",
+      "description": "Select the CRM scopes your app needs: crm.objects.contacts.read, crm.objects.deals.read, crm.objects.companies.read, etc. HubSpot's scope system maps directly to CRM object permissions.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "warnings": [
+        "Users will see exactly which objects your app can access — request only what's needed"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Test with a Test Portal",
+      "description": "Create a free test portal in your developer account to test your integration without affecting real data. Install your app to this test portal and verify the OAuth flow and API calls work correctly.",
+      "agent_can_do": false,
+      "estimated_time": "30 minutes",
+      "warnings": []
+    },
+    {
+      "number": 5,
+      "title": "Configure in Composio",
+      "description": "Get the Client ID and Client Secret from your app's Auth tab. Configure a Composio custom auth config with toolkit='hubspot' and these credentials.",
+      "agent_can_do": true,
+      "estimated_time": "10 minutes",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Free HubSpot Developer account",
+    "needs_live_website": false,
+    "needs_privacy_policy": true,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["crm.objects.contacts.read", "crm.objects.deals.read", "crm.objects.companies.read", "crm.objects.contacts.write"],
+    "restricted_scopes": ["e-commerce", "accounting"]
+  },
+  "blockers": [
+    {
+      "title": "Marketplace Listing Privacy Policy",
+      "description": "If submitting to the App Marketplace, a privacy policy link is required and will be shown to users. The privacy policy must accurately describe data handling.",
+      "severity": "warning",
+      "workaround": "Prepare a privacy policy page before submitting for marketplace listing."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research HubSpot Developer App creation process",
+      "result": "Documented straightforward self-service OAuth app creation with good developer documentation",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "HubSpot OAuth Documentation",
+      "url": "https://developers.hubspot.com/docs/api/oauth-quickstart-guide",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "verified",
+  "last_verified": "2025-01-15"
+}
+

@@ -1,0 +1,110 @@
+{
+  "app": "Dropbox",
+  "slug": "dropbox",
+  "website": "dropbox.com",
+  "logo_url": "https://cfl.dropboxstatic.com/static/images/logo_catalog/dropbox_logo_glyph.svg",
+  "generated_at": "2025-01-15T00:00:00Z",
+  "difficulty": "medium",
+  "setup_time_estimate": "1–2 hours",
+  "approval_time_estimate": "1–5 business days (for production app)",
+  "requires_approval": true,
+  "composio_managed_auth": true,
+  "summary": "Dropbox OAuth is moderately complex. App creation and development testing is instant and self-service. To take an app to production (allowing any Dropbox user to connect, not just the developer), the app must apply for 'production' status, which requires Dropbox's review. This review takes 1–5 business days and checks that the app actually works and has a real use case. Composio managed auth is available for Dropbox.",
+  "key_facts": [
+    "Development apps work immediately but are limited to 500 users and require Dropbox folder permission",
+    "Production status requires Dropbox review: 1–5 business days",
+    "Two access types: App folder (sandboxed) vs Full Dropbox access",
+    "Full Dropbox access requires more scrutiny during production review",
+    "Composio managed auth available for prototyping"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create a Dropbox App",
+      "description": "Go to dropbox.com/developers and click 'Create apps'. Choose API type: 'Scoped access'. Choose access level: 'App folder' (sandboxed to a single folder) or 'Full Dropbox' (access to entire Dropbox). Name your app.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://www.dropbox.com/developers/apps/create",
+      "warnings": [
+        "App folder access is easier to get approved — use it unless you truly need full Dropbox access"
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Configure OAuth Settings",
+      "description": "In your app settings, go to the Permissions tab and enable the permissions you need. In the Settings tab, add redirect URIs: https://backend.composio.dev/api/v3/toolkits/auth/callback for Composio.",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": "https://www.dropbox.com/developers/apps",
+      "warnings": []
+    },
+    {
+      "number": 3,
+      "title": "Test in Development Mode",
+      "description": "In development, your app can authenticate Dropbox accounts. Copy the App Key and App Secret from Settings for use in your integration. Test thoroughly before applying for production.",
+      "agent_can_do": false,
+      "estimated_time": "30–60 minutes",
+      "warnings": [
+        "Development apps can only have up to 500 connected users"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Apply for Production Status",
+      "description": "Once testing is complete, go to the Settings tab and click 'Apply for production'. You'll fill a form explaining your app's purpose, user benefit, and how you handle data. Dropbox reviews and typically responds within 1–5 business days.",
+      "agent_can_do": false,
+      "estimated_time": "30 minutes to complete form",
+      "warnings": [
+        "Your app must be functional and demonstrate real user value to pass production review"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Configure in Composio",
+      "description": "Use your App Key (Client ID) and App Secret (Client Secret) to configure a Composio custom auth config with toolkit='dropbox'.",
+      "agent_can_do": true,
+      "estimated_time": "5 minutes",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Free Dropbox account sufficient",
+    "needs_live_website": true,
+    "needs_privacy_policy": true,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": ["files.content.read", "files.content.write", "files.metadata.read", "sharing.read"],
+    "restricted_scopes": ["team_data.member", "team_data.governance.write"]
+  },
+  "blockers": [
+    {
+      "title": "500-User Limit in Development",
+      "description": "Development (unapproved) apps can only authenticate up to 500 Dropbox accounts. You cannot launch publicly without production approval.",
+      "severity": "blocking",
+      "workaround": "Apply for production status as soon as your app is functional. Development period can be used for beta testing with limited users."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Research Dropbox developer app creation and production approval",
+      "result": "Found clear two-stage process: development (instant) → production (review required)",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Dropbox OAuth Guide",
+      "url": "https://developers.dropbox.com/oauth-guide",
+      "type": "official_docs"
+    },
+    {
+      "title": "Dropbox App Console",
+      "url": "https://www.dropbox.com/developers/apps",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "verified",
+  "last_verified": "2025-01-15"
+}
+
