@@ -78,8 +78,21 @@
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["User.Read", "Mail.Read", "Calendars.Read", "Files.Read", "openid", "profile", "email", "offline_access"],
-    "restricted_scopes": ["Mail.ReadWrite.All", "Directory.ReadWrite.All", "RoleManagement.ReadWrite.Directory"]
+    "allowed_scopes": [
+      "User.Read",
+      "Mail.Read",
+      "Calendars.Read",
+      "Files.Read",
+      "openid",
+      "profile",
+      "email",
+      "offline_access"
+    ],
+    "restricted_scopes": [
+      "Mail.ReadWrite.All",
+      "Directory.ReadWrite.All",
+      "RoleManagement.ReadWrite.Directory"
+    ]
   },
   "blockers": [
     {
@@ -97,14 +110,14 @@
   ],
   "agent_actions": [
     {
-      "action": "Research Microsoft Entra ID app registration process",
-      "result": "Documented complete Azure Portal registration flow and Graph API permission model",
+      "action": "Checked Composio managed-auth directory",
+      "result": "Outlook, Microsoft Teams and OneDrive are listed as Composio-managed OAuth",
       "status": "done"
     },
     {
-      "action": "Identify admin consent requirements for common scopes",
-      "result": "Found key admin-consent-required scopes and documented workaround approach",
-      "status": "done"
+      "action": "Verify setup steps and timelines against provider documentation",
+      "result": "Setup steps, requirements and approval timeline were written from public documentation and have NOT been re-checked against live sources in this verification pass",
+      "status": "partial"
     }
   ],
   "sources": [
@@ -119,7 +132,28 @@
       "type": "official_docs"
     }
   ],
-  "confidence": "verified",
-  "last_verified": "2025-01-15"
+  "confidence": "source_supported",
+  "last_verified": "2025-01-15",
+  "verification": {
+    "status": "not_checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Outlook, Microsoft Teams and OneDrive are listed as Composio-managed OAuth"
+    ],
+    "corrected": [],
+    "unverified": [
+      "Setup steps, requirements and approval timeline were written from public documentation and have NOT been re-checked against live sources in this verification pass"
+    ]
+  },
+  "next_step": "Register an app in the Microsoft Entra admin center, add redirect URIs, and choose delegated permissions; test with a personal account before requesting organization-wide consent.",
+  "if_blocked": [
+    {
+      "situation": "Admin consent required",
+      "action": "Ask a tenant admin to grant consent, or reduce permissions to those users can consent to themselves.",
+      "url": "https://entra.microsoft.com"
+    }
+  ]
 }
-

@@ -123,9 +123,9 @@ function GeneratePageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobParam]);
 
-  const handleGenerate = async (nameOverride?: string) => {
+  const handleGenerate = async (nameOverride?: string, fresh = false) => {
     const name = (nameOverride ?? appName).trim();
-    if (!name || isGenerating) return;
+    if (!name || (isGenerating && !fresh)) return;
 
     setError('');
     setIsGenerating(true);
@@ -133,7 +133,7 @@ function GeneratePageInner() {
       const res = await fetch(`${API_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_name: name, website_url: websiteUrl || undefined }),
+        body: JSON.stringify({ app_name: name, website_url: websiteUrl || undefined, fresh }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -173,10 +173,19 @@ function GeneratePageInner() {
         banner={
           <div className="animate-pop flex flex-wrap items-center justify-between gap-4 border border-brand-300/30 bg-brand/15 px-5 py-3">
             <p className="font-mono text-xs uppercase tracking-[0.1em] text-white/90">
-              ✨ Freshly generated · saved at <span className="text-brand-300">/guide/{guide.slug}</span>
+              {guide.verification?.status === 'automated_checks' ? '✨ Freshly researched by the agent' : '📚 From the guide library (not a live run)'} · link: <span className="text-brand-300">/guide/{guide.slug}</span>
             </p>
             <div className="flex gap-2">
               <Link href={`/guide/${guide.slug}`} className="btn-light btn-sm">Open shareable page <span className="arr">→</span></Link>
+              {guide.verification?.status !== 'automated_checks' && (
+                <button
+                  onClick={() => { setGuide(null); handleGenerate(guide.app.split(' (')[0], true); }}
+                  className="btn-ghost btn-sm"
+                  title="This is a stored guide from the library. Run the live research agent for a fresh one."
+                >
+                  Research live instead
+                </button>
+              )}
               <button onClick={reset} className="btn-ghost btn-sm">New guide</button>
             </div>
           </div>

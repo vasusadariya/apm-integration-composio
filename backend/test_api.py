@@ -133,6 +133,46 @@ class TestResearchJobs(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(job.status, "error")
         self.assertIn("took too long", job.events[-1]["message"])
 
+
+class TestProbeAndLimits(unittest.IsolatedAsyncioTestCase):
+    def test_ssrf_guard_rejects_private_and_non_http(self):
+        from agent.probe import is_public_url
+        for bad in ("http://127.0.0.1/x", "http://localhost/", "http://169.254.169.254/latest", "file:///etc/passwd", "ftp://example.com"):
+            self.assertFalse(is_public_url(bad), bad)
+
+    async def test_probe_records_machine_checks(self):
+        from agent import probe
+        async def fake_check(client, url):
+            return url, 200, "reachable"
+        async def fake_discovery(client, website):
+            return None
+        orig = (probe._check, probe._discovery)
+        probe._check, probe._discovery = fake_check, fake_discovery
+        try:
+            guide = load_guide("github")
+            guide = await probe.probe_guide(guide)
+        finally:
+            probe._check, probe._discovery = orig
+        self.assertEqual(guide["verification"]["status"], "automated_checks")
+        self.assertTrue(any("Link check" in a["action"] for a in guide["agent_actions"]))
+
+    def test_rate_limit(self):
+        import main
+        from fastapi import HTTPException
+        main._hits.clear()
+        old = main.RATE_LIMIT_PER_HOUR
+        main.RATE_LIMIT_PER_HOUR = 2
+        try:
+            main.check_rate_limit("1.2.3.4")
+            main.check_rate_limit("1.2.3.4")
+            with self.assertRaises(HTTPException) as ctx:
+                main.check_rate_limit("1.2.3.4")
+            self.assertEqual(ctx.exception.status_code, 429)
+            main.check_rate_limit("5.6.7.8")  # other clients are unaffected
+        finally:
+            main.RATE_LIMIT_PER_HOUR = old
+            main._hits.clear()
+
 if __name__ == "__main__":
     unittest.main()
 

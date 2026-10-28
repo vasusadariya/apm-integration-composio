@@ -5,6 +5,7 @@ Serves pre-built guides and streams AI-generated guides via SSE.
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -116,10 +117,25 @@ def search_guides(q: str = ""):
 class GenerateRequest(BaseModel):
     app_name: str
     website_url: str | None = None
+    fresh: bool = False  # skip cache and library: run a live research pass
+
+
+# Simple per-IP limiter for the expensive endpoint (in-memory; resets on restart).
+RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "12"))
+_hits: dict[str, list[float]] = {}
+
+
+def check_rate_limit(ip: str) -> None:
+    now = time.time()
+    recent = [t for t in _hits.get(ip, []) if now - t < 3600]
+    if len(recent) >= RATE_LIMIT_PER_HOUR:
+        raise HTTPException(status_code=429, detail=f"Rate limit reached ({RATE_LIMIT_PER_HOUR} generations per hour). Please try again later.")
+    recent.append(now)
+    _hits[ip] = recent
 
 
 @app.post("/api/generate")
-async def generate_guide(request: GenerateRequest):
+async def generate_guide(request: GenerateRequest, http_request: Request):
     """
     Start (or rejoin) a background research job for an app.
     Follow it with GET /api/jobs/{id}/events — it survives page refreshes.
@@ -135,7 +151,9 @@ async def generate_guide(request: GenerateRequest):
             detail="GEMINI_API_KEY is not configured on the server. Get a free key at https://aistudio.google.com/app/apikey.",
         )
 
-    job, reused = start_job(app_name, request.website_url, api_key)
+    # Rejoining an existing job costs nothing, so only count genuinely new runs.
+    job, reused = start_job(app_name, request.website_url, api_key, request.fresh, before_start=lambda: check_rate_limit(
+        (http_request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (http_request.client.host if http_request.client else "unknown"))))
     return {"job_id": job.id, "reused": reused, "status": job.status}
 
 

@@ -88,8 +88,18 @@
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["api", "refresh_token", "offline_access", "openid", "profile", "email"],
-    "restricted_scopes": ["full", "admin"]
+    "allowed_scopes": [
+      "api",
+      "refresh_token",
+      "offline_access",
+      "openid",
+      "profile",
+      "email"
+    ],
+    "restricted_scopes": [
+      "full",
+      "admin"
+    ]
   },
   "blockers": [
     {
@@ -113,14 +123,14 @@
   ],
   "agent_actions": [
     {
-      "action": "Research Salesforce Connected App setup process",
-      "result": "Found full setup path through Salesforce Developer documentation",
+      "action": "Checked Composio managed-auth directory",
+      "result": "Salesforce is listed as Composio-managed OAuth",
       "status": "done"
     },
     {
-      "action": "Identify multi-instance URL complexity",
-      "result": "Documented the login.salesforce.com approach and instance URL extraction pattern",
-      "status": "done"
+      "action": "Verify setup steps and timelines against provider documentation",
+      "result": "Setup steps, requirements and approval timeline were written from public documentation and have NOT been re-checked against live sources in this verification pass; Attempted to check Salesforce Help: the page failed to load, so nothing was confirmed",
+      "status": "blocked"
     }
   ],
   "sources": [
@@ -135,7 +145,28 @@
       "type": "official_docs"
     }
   ],
-  "confidence": "verified",
-  "last_verified": "2025-01-15"
+  "confidence": "source_supported",
+  "last_verified": "2025-01-15",
+  "verification": {
+    "status": "not_checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Salesforce is listed as Composio-managed OAuth"
+    ],
+    "corrected": [],
+    "unverified": [
+      "Setup steps, requirements and approval timeline were written from public documentation and have NOT been re-checked against live sources in this verification pass",
+      "Attempted to check Salesforce Help: the page failed to load, so nothing was confirmed"
+    ]
+  },
+  "next_step": "Create a Connected App (or the newer External Client App) in a developer org, add your callback URL and OAuth scopes, then test in a sandbox before targeting customer orgs.",
+  "if_blocked": [
+    {
+      "situation": "Login fails against sandbox or custom domain",
+      "action": "Use the correct login host (login.salesforce.com, test.salesforce.com or the My Domain URL) for each org."
+    }
+  ]
 }
-

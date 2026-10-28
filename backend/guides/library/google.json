@@ -6,18 +6,19 @@
   "generated_at": "2025-01-15T00:00:00Z",
   "difficulty": "very_hard",
   "setup_time_estimate": "4–8 hours of active work",
-  "approval_time_estimate": "4–6 weeks (if sensitive scopes required)",
+  "approval_time_estimate": "4–6 weeks (community-reported; Google publishes no timeline)",
   "requires_approval": true,
   "composio_managed_auth": true,
-  "summary": "Google OAuth is the most complex setup in the ecosystem for any app requesting sensitive scopes (Gmail, Drive, Calendar data stored on external servers). Basic read-only scopes can be approved within a few days. However, requesting write access to Gmail or full Drive access from external users triggers Google's CASA Tier 2 security assessment — a mandatory third-party audit costing $4,000–$75,000 and taking 4–6 weeks minimum. Composio provides managed auth for Google to bypass this for prototyping.",
+  "summary": "Google OAuth is the most demanding setup in this library. Apps using only non-sensitive scopes need no verification, but any sensitive or restricted scope (Gmail, Drive, Calendar data) requires Google's OAuth app verification, and restricted scopes also require an annual third-party security assessment. Google does not publish review timelines; community reports put the full process at weeks and costs in the thousands of dollars.",
   "key_facts": [
-    "Two distinct approval tracks: basic scopes (days) vs sensitive/restricted scopes (weeks + security audit)",
-    "CASA Tier 2 audit required for restricted scopes — cost starts around $4,000",
-    "Your app will be stuck in 'Testing' mode (100-user limit) until verification completes",
-    "Users see a scary 'This app isn't verified' warning in testing mode",
-    "A live website, privacy policy, and terms of service are mandatory before submission",
-    "Composio managed auth available — strongly recommended for prototyping and early users",
-    "Google reviews consent screen videos — record a clear walkthrough of your auth flow"
+    "Two tracks: non-sensitive scopes need no verification; sensitive and restricted scopes require Google's OAuth app verification",
+    "Restricted scopes (e.g. broad Gmail / Drive access) also require an annual security assessment by a Google-empanelled assessor — cost and duration vary and are not published by Google",
+    "Verification is repeated annually for apps with restricted scopes, and some configuration changes trigger re-verification",
+    "Your homepage must be on a verified domain, describe your app (not just a login page) and link your privacy policy; the same policy must be linked on the consent screen",
+    "Every authorized domain must be verified through Google Search Console",
+    "Sensitive/restricted scopes need a demo video showing the full OAuth flow and consent screen (English) with the exact scopes requested",
+    "You must justify each scope and why narrower scopes would not work — vague justification can cause rejection",
+    "Apps in 'Testing' mode are limited to test users and show an unverified-app warning"
   ],
   "steps": [
     {
@@ -93,13 +94,13 @@
       "agent_can_do": false,
       "estimated_time": "1–2 hours",
       "warnings": [
-        "If requesting restricted scopes, you'll be directed to complete a CASA Tier 2 assessment before Google reviews your app"
+        "If requesting restricted scopes, you'll be directed to complete a annual security assessment before Google reviews your app"
       ]
     },
     {
       "number": 8,
-      "title": "Complete CASA Assessment (if restricted scopes)",
-      "description": "If your app needs restricted scopes, hire an approved CASA assessor from Google's partner list. They conduct a security assessment of your application. Costs range from $4,000 to $75,000+ depending on app complexity. Timeline: 4–6 weeks.",
+      "title": "Complete Security Assessment (if restricted scopes)",
+      "description": "If your app needs restricted scopes, hire an approved CASA assessor from Google's partner list. They conduct a security assessment of your application. Cost and duration vary by assessor and app (commonly reported in the thousands of dollars; Google does not publish them). Timeline: 4–6 weeks.",
       "agent_can_do": false,
       "estimated_time": "4–6 weeks",
       "url": "https://appdefensealliance.dev/casa",
@@ -116,13 +117,25 @@
     "needs_terms_of_service": true,
     "needs_video_demo": true,
     "needs_security_audit": true,
-    "allowed_scopes": ["email", "profile", "openid", "calendar.readonly", "contacts.readonly"],
-    "restricted_scopes": ["gmail.modify", "gmail.compose", "drive", "drive.file", "mail.google.com"]
+    "allowed_scopes": [
+      "email",
+      "profile",
+      "openid",
+      "calendar.readonly",
+      "contacts.readonly"
+    ],
+    "restricted_scopes": [
+      "gmail.modify",
+      "gmail.compose",
+      "drive",
+      "drive.file",
+      "mail.google.com"
+    ]
   },
   "blockers": [
     {
-      "title": "CASA Security Audit (Restricted Scopes)",
-      "description": "Apps requesting restricted scopes (Gmail write, full Drive access) must complete a CASA Tier 2 assessment before Google will approve verification. This costs $4,000–$75,000+ and takes 4–6 weeks.",
+      "title": "Security Assessment (Restricted Scopes)",
+      "description": "Apps requesting restricted scopes (Gmail write, full Drive access) must complete a annual security assessment before Google will approve verification. This is a separate, paid third-party assessment whose cost and duration Google does not publish.",
       "severity": "blocking",
       "workaround": "Use read-only scopes where possible. Use Composio managed auth to avoid this entirely during prototyping. For production, either budget for the audit or scope down your permission requirements."
     },
@@ -141,18 +154,23 @@
   ],
   "agent_actions": [
     {
-      "action": "Research Google OAuth scope tiers and approval requirements",
-      "result": "Documented three-tier scope system: non-sensitive, sensitive, restricted — with distinct approval paths",
+      "action": "Fetched and read https://support.google.com/cloud/answer/13463073",
+      "result": "Compared the page against this guide's claims.",
       "status": "done"
     },
     {
-      "action": "Find CASA assessment requirements and cost range",
-      "result": "Identified CASA Tier 2 as mandatory for restricted scopes; cost $4K–$75K from approved assessors",
+      "action": "Fetched and read https://support.google.com/cloud/answer/13464321",
+      "result": "Compared the page against this guide's claims.",
       "status": "done"
     },
     {
-      "action": "Verify Composio managed auth support for Google",
-      "result": "Confirmed Google (Gmail, Drive, Calendar) is in Composio's managed auth directory",
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "8 claims confirmed, 2 corrected, 3 could not be verified.",
       "status": "done"
     }
   ],
@@ -173,7 +191,51 @@
       "type": "official_docs"
     }
   ],
-  "confidence": "verified",
-  "last_verified": "2025-01-15"
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://support.google.com/cloud/answer/13463073",
+      "https://support.google.com/cloud/answer/13464321",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Sensitive and restricted scopes must complete OAuth app verification before access is granted",
+      "Homepage on a verified domain, not only a login page, linking the privacy policy",
+      "Privacy policy on the homepage domain and linked from the consent screen",
+      "Domain verification via Google Search Console for all authorized domains",
+      "Demo video of the end-to-end flow for sensitive/restricted scopes (consent screen in English, exact scopes)",
+      "Scope justification (why narrower scopes will not work)",
+      "Restricted-scope apps must pass an annual security assessment by a Google-empanelled assessor",
+      "Gmail, Google Drive and Google Calendar are listed as Composio-managed OAuth"
+    ],
+    "corrected": [
+      "Added: annual re-verification, homepage-not-just-login rule, Search Console domain verification, AI-training consent in the demo video",
+      "Reworded the key facts: removed the \"CASA Tier 2\" name and the cost as stated facts, since the pages checked do not state them"
+    ],
+    "unverified": [
+      "The 4–6 week timeline (Google states none; community-reported only)",
+      "The $4,000–$75,000 assessment cost range and the \"CASA Tier 2\" naming (not on the pages checked)",
+      "The \"100-user limit\" in Testing mode (not on the pages checked)"
+    ]
+  },
+  "next_step": "Decide which Google scopes you really need — start by listing them. If any are restricted, plan for verification plus an annual security assessment before you commit to a launch date.",
+  "if_blocked": [
+    {
+      "situation": "Verification rejected or stalled",
+      "action": "Narrow your scopes, rewrite the scope justification, and re-record the demo video showing the exact consent screen. Respond to every email from the Trust & Safety team.",
+      "url": "https://support.google.com/cloud/answer/13464321"
+    },
+    {
+      "situation": "Need restricted scopes but cannot fund a security assessment",
+      "action": "Redesign around non-sensitive or sensitive-only scopes, or use Composio managed auth while you evaluate."
+    },
+    {
+      "situation": "Domain verification failing",
+      "action": "Verify the domain in Google Search Console with the same Google account that owns the Cloud project.",
+      "url": "https://search.google.com/search-console"
+    }
+  ]
 }
-

@@ -13,10 +13,12 @@
   "key_facts": [
     "No approval or review process — goes live immediately",
     "Free GitHub account is sufficient; no paid plan needed",
-    "Callback URLs must be exact matches (no wildcards in production)",
+    "Up to 10 callback URLs can be registered per OAuth app",
     "Personal OAuth apps live under user settings; team apps should be owned by a GitHub Organization",
     "Rate limits are shared across all users of your app — plan accordingly",
-    "Composio managed auth available: prototype without registering your own app"
+    "Composio managed auth available: prototype without registering your own app",
+    "GitHub recommends considering a GitHub App first: OAuth Apps can only act on behalf of a user, while GitHub Apps have fine-grained permissions and short-lived tokens",
+    "\"Expire user access tokens\" is enabled by default — uncheck it only if your app cannot handle refresh tokens yet"
   ],
   "steps": [
     {
@@ -76,8 +78,19 @@
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["repo", "read:user", "user:email", "read:org", "gist", "notifications"],
-    "restricted_scopes": ["delete_repo", "admin:org", "admin:repo_hook"]
+    "allowed_scopes": [
+      "repo",
+      "read:user",
+      "user:email",
+      "read:org",
+      "gist",
+      "notifications"
+    ],
+    "restricted_scopes": [
+      "delete_repo",
+      "admin:org",
+      "admin:repo_hook"
+    ]
   },
   "blockers": [
     {
@@ -95,18 +108,18 @@
   ],
   "agent_actions": [
     {
-      "action": "Research GitHub OAuth documentation",
-      "result": "Found complete OAuth app documentation at docs.github.com/en/apps/oauth-apps",
+      "action": "Fetched and read https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app",
+      "result": "Compared the page against this guide's claims.",
       "status": "done"
     },
     {
-      "action": "Verify Composio managed auth support for GitHub",
-      "result": "Confirmed GitHub is in Composio's managed auth directory",
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
       "status": "done"
     },
     {
-      "action": "Identify callback URL for Composio integration",
-      "result": "Found: https://backend.composio.dev/api/v3/toolkits/auth/callback",
+      "action": "Summarised the comparison",
+      "result": "5 claims confirmed, 3 corrected, 2 could not be verified.",
       "status": "done"
     }
   ],
@@ -123,6 +136,42 @@
     }
   ],
   "confidence": "verified",
-  "last_verified": "2025-01-15"
+  "last_verified": "2026-10-28",
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Registration path: Settings → Developer settings → OAuth apps → New OAuth App",
+      "Required fields: application name, homepage URL, authorization callback URL",
+      "The docs describe no review or approval step",
+      "A user or organization can own up to 100 OAuth apps",
+      "GitHub is listed as Composio-managed OAuth"
+    ],
+    "corrected": [
+      "Callback URLs: up to 10 are allowed (guide implied a single exact URL) — updated",
+      "Added: GitHub recommends GitHub Apps first, and OAuth Apps can only act on behalf of a user",
+      "Added: user access tokens expire by default"
+    ],
+    "unverified": [
+      "\"Rate limits are shared across all users of your app\" (not on the checked page)",
+      "Composio custom-auth configuration steps (not exercised)"
+    ]
+  },
+  "next_step": "Open GitHub → Settings → Developer settings → OAuth Apps and register the app (about 5 minutes). Use Composio managed auth meanwhile if you just want to prototype.",
+  "if_blocked": [
+    {
+      "situation": "Redirect/callback URL mismatch error",
+      "action": "Make the redirect_uri in your request match one of the callback URLs on the app settings page exactly.",
+      "url": "https://github.com/settings/developers"
+    },
+    {
+      "situation": "Need fine-grained permissions or org-owned installs",
+      "action": "Create a GitHub App instead of an OAuth App.",
+      "url": "https://docs.github.com/en/apps/creating-github-apps"
+    }
+  ]
 }
-
