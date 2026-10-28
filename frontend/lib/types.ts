@@ -55,6 +55,25 @@ export interface Verification {
   unverified: string[];
 }
 
+export interface OAuthEndpoints {
+  authorization_url: string;
+  token_url?: string | null;
+}
+
+export interface SetupKit {
+  values: { label: string; value: string; hint?: string }[];
+  links: { label: string; url: string }[];
+  files: { filename: string; mime: string; content: string; note?: string }[];
+}
+
+export interface EndpointProbe {
+  endpoint: 'authorization' | 'token';
+  url: string;
+  status?: number;
+  outcome: 'rejects_client' | 'login_first' | 'reachable' | 'blocked' | 'down' | 'skipped';
+  detail: string;
+}
+
 export interface OAuthGuide {
   app: string;
   slug: string;
@@ -78,6 +97,8 @@ export interface OAuthGuide {
   next_step?: string | null;
   if_blocked?: IfBlocked[];
   verification?: Verification | null;
+  oauth_endpoints?: OAuthEndpoints | null;
+  setup_kit?: SetupKit | null;
 }
 
 export type GuideCard = Pick<OAuthGuide,

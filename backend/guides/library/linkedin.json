@@ -178,5 +178,9 @@
       "situation": "invalid scope / redirect_uri mismatch (401)",
       "action": "Only request scopes your app has Products for, and send a redirect_uri identical to one in the Auth tab."
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://www.linkedin.com/oauth/v2/authorization",
+    "token_url": "https://www.linkedin.com/oauth/v2/accessToken"
+  }
 }

@@ -1,0 +1,173 @@
+{
+  "app": "Discord",
+  "slug": "discord",
+  "website": "discord.com",
+  "logo_url": "https://www.google.com/s2/favicons?domain=discord.com&sz=128",
+  "generated_at": "2026-10-28T00:00:00+00:00",
+  "difficulty": "easy",
+  "setup_time_estimate": "30–60 minutes",
+  "approval_time_estimate": "None for basic scopes; some scopes need Discord approval",
+  "requires_approval": false,
+  "composio_managed_auth": true,
+  "summary": "Discord OAuth2 apps are created in the developer applications page and get a client ID and secret immediately. Basic scopes need no review, but some scopes are restricted to approved partners and verified bots have no server cap. Discord publishes OAuth discovery metadata, and tokens last about seven days.",
+  "key_facts": [
+    "Register an application to get client_id and client_secret; a bot user is added to every app automatically",
+    "Some scopes require approval from Discord — e.g. dm_channels.read, voice and the rpc.* scopes are limited to approved partners",
+    "The bot flow does not need response_type or redirect_uri unless you request scopes beyond bot and applications.commands",
+    "Token and revoke requests must be application/x-www-form-urlencoded (not JSON); authenticate with HTTP Basic or client credentials in the body",
+    "Example token lifetime in the docs is 604800 seconds (7 days); use the refresh token to renew",
+    "The implicit grant returns no refresh token and is discouraged for production",
+    "Discord publishes /.well-known/oauth-authorization-server and /.well-known/openid-configuration"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create an application",
+      "description": "Register a developer application on the Discord developer applications page to obtain the client ID and secret.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://discord.com/developers/applications",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Add redirect URIs",
+      "description": "Register the redirect URI(s) on the application (for Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback). Discord uses the first registered URI if you do not send redirect_uri.",
+      "agent_can_do": false,
+      "estimated_time": "5 minutes",
+      "url": null,
+      "warnings": []
+    },
+    {
+      "number": 3,
+      "title": "Pick scopes",
+      "description": "Request only the scopes you need. Scopes marked as partner-only cannot be used without Discord approval.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": null,
+      "warnings": [
+        "Check each scope in the docs for approval requirements"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Send users to authorize",
+      "description": "Redirect to https://discord.com/oauth2/authorize with client_id, scope, redirect_uri and response_type=code.",
+      "agent_can_do": true,
+      "estimated_time": "15 minutes",
+      "url": "https://discord.com/oauth2/authorize",
+      "warnings": []
+    },
+    {
+      "number": 5,
+      "title": "Exchange the code",
+      "description": "POST (form-encoded) to https://discord.com/api/oauth2/token with grant_type=authorization_code; refresh later with grant_type=refresh_token.",
+      "agent_can_do": true,
+      "estimated_time": "30 minutes",
+      "url": "https://discord.com/api/oauth2/token",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Discord account (free)",
+    "needs_live_website": false,
+    "needs_privacy_policy": false,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": [
+      "identify",
+      "email",
+      "guilds"
+    ],
+    "restricted_scopes": [
+      "dm_channels.read",
+      "voice",
+      "rpc.*",
+      "relationships.read"
+    ]
+  },
+  "blockers": [
+    {
+      "title": "Partner-only scopes",
+      "description": "Some scopes (e.g. dm_channels.read, voice, rpc.*) are only available to approved partners; relationships.read must be requested through the Social SDK.",
+      "severity": "blocking",
+      "workaround": "Design around the public scopes, or apply to Discord for access."
+    },
+    {
+      "title": "Bot verification at scale",
+      "description": "Discord's docs say verified bots have no maximum server count and link to a verification guide, but do not detail the process.",
+      "severity": "info",
+      "workaround": "Read the verification guide before planning for large bots."
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Fetched and read https://docs.discord.com/developers/topics/oauth2",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "7 claims confirmed, 0 corrected, 2 could not be verified.",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Discord OAuth2 documentation",
+      "url": "https://docs.discord.com/developers/topics/oauth2",
+      "type": "official_docs"
+    },
+    {
+      "title": "Composio managed OAuth directory",
+      "url": "https://docs.composio.dev/toolkits/managed-auth",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "next_step": "Create an application on the Discord developer applications page, copy the client ID/secret, and register your redirect URI. Start with public scopes (identify, email).",
+  "if_blocked": [
+    {
+      "situation": "Scope is rejected as unavailable",
+      "action": "It is likely partner-only — remove it or apply to Discord for access.",
+      "url": "https://docs.discord.com/developers/topics/oauth2"
+    },
+    {
+      "situation": "Token request fails with 400",
+      "action": "Send the body as application/x-www-form-urlencoded, not JSON."
+    }
+  ],
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://docs.discord.com/developers/topics/oauth2",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Applications are registered to obtain client_id/client_secret; a bot user is added automatically",
+      "Some scopes require Discord approval and are partner-only",
+      "Authorize https://discord.com/oauth2/authorize; token https://discord.com/api/oauth2/token",
+      "Requests must be application/x-www-form-urlencoded",
+      "Discovery documents are published at /.well-known/oauth-authorization-server and /.well-known/openid-configuration",
+      "Example token lifetime is 7 days with refresh tokens",
+      "Discord is listed as Composio-managed OAuth"
+    ],
+    "corrected": [],
+    "unverified": [
+      "Bot verification requirements and timeline (page only links to a guide)",
+      "App-level review for public distribution of non-bot OAuth apps"
+    ]
+  },
+  "oauth_endpoints": {
+    "authorization_url": "https://discord.com/oauth2/authorize",
+    "token_url": "https://discord.com/api/oauth2/token"
+  }
+}

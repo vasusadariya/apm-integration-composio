@@ -4,7 +4,7 @@ Tests all endpoints, schema validation, and search functionality.
 """
 import unittest
 from fastapi.testclient import TestClient
-from main import app, list_all_guides, load_guide
+from main import app, list_all_guides, load_guide, LIBRARY_DIR
 from guides.schema import OAuthGuide
 
 
@@ -71,7 +71,7 @@ class TestOAuthGuideAPI(unittest.TestCase):
         res = self.client.get("/api/search?q=")
         self.assertEqual(res.status_code, 200)
         results = res.json()
-        self.assertEqual(len(results), 12)
+        self.assertEqual(len(results), len(list(LIBRARY_DIR.glob('*.json'))))
 
     def test_all_library_files_valid_schema(self):
         """Ensure every JSON file in the library strictly matches the OAuthGuide model."""
@@ -172,6 +172,38 @@ class TestProbeAndLimits(unittest.IsolatedAsyncioTestCase):
         finally:
             main.RATE_LIMIT_PER_HOUR = old
             main._hits.clear()
+
+
+class TestSetupKitAndProbe(unittest.IsolatedAsyncioTestCase):
+    def test_setup_kit_slack_has_manifest_and_prefilled_link(self):
+        c = TestClient(app)
+        kit = c.get("/api/guides/slack").json()["setup_kit"]
+        self.assertTrue(any(f["filename"] == "slack-app-manifest.json" for f in kit["files"]))
+        self.assertTrue(any("manifest_json=" in l["url"] for l in kit["links"]))
+        self.assertTrue(any("backend.composio.dev" in v["value"] for v in kit["values"]))
+
+    def test_every_library_guide_has_endpoints_and_next_step(self):
+        for g in list_all_guides():
+            full = load_guide(g["slug"])
+            self.assertTrue(full["oauth_endpoints"]["authorization_url"].startswith("https://"), g["slug"])
+            self.assertTrue(full["next_step"], g["slug"])
+            self.assertTrue(full["verification"], g["slug"])
+
+    def test_probe_rejects_non_https_and_private(self):
+        c = TestClient(app)
+        self.assertEqual(c.post("/api/probe", json={"authorization_url": "http://example.com"}).status_code, 422)
+
+    async def test_probe_endpoints_blocks_private_addresses(self):
+        from agent.setup import probe_endpoints
+        r = await probe_endpoints("https://127.0.0.1/oauth/authorize", "https://localhost/token")
+        self.assertTrue(all(x["outcome"] == "skipped" for x in r))
+
+    def test_classifier(self):
+        from agent.setup import _classify_authorize
+        self.assertEqual(_classify_authorize(302, "/oauth2/authorize_error?x=1", "")[0], "rejects_client")
+        self.assertEqual(_classify_authorize(302, "https://x.com/signin?next", "")[0], "login_first")
+        self.assertEqual(_classify_authorize(400, "", "invalid_client")[0], "rejects_client")
+        self.assertEqual(_classify_authorize(403, "", "")[0], "blocked")
 
 if __name__ == "__main__":
     unittest.main()

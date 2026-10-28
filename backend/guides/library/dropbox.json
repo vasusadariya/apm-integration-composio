@@ -150,5 +150,9 @@
       "action": "Apply for production status early, with a clear description of how you use each scope; respond promptly to Dropbox's questions.",
       "url": "https://www.dropbox.com/developers/apps"
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://www.dropbox.com/oauth2/authorize",
+    "token_url": "https://api.dropboxapi.com/oauth2/token"
+  }
 }

@@ -15,6 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from agent.jobs import get_job, start_job, stream_events
+from agent.setup import build_setup_kit, probe_endpoints
 from agent.researcher import GENERATED_DIR
 
 load_dotenv()
@@ -97,8 +98,40 @@ def get_all_guides():
 
 @app.get("/api/guides/{slug}")
 def get_guide(slug: str):
-    """Get a specific pre-built guide by slug."""
-    return load_guide(slug)
+    """Get a guide by slug (library or generated), with a computed setup kit."""
+    guide = load_guide(slug)
+    guide["setup_kit"] = build_setup_kit(guide)
+    return guide
+
+
+class ProbeRequest(BaseModel):
+    authorization_url: str
+    token_url: str | None = None
+
+
+_probe_cache: dict[tuple, tuple[float, list]] = {}
+
+
+@app.post("/api/probe")
+async def probe(request: ProbeRequest, http_request: Request):
+    """
+    Live-test a provider's OAuth endpoints with deliberately invalid requests.
+    Only public https URLs are allowed; results are cached for 10 minutes.
+    """
+    for u in (request.authorization_url, request.token_url):
+        if u and not u.startswith("https://"):
+            raise HTTPException(status_code=422, detail="Endpoints must be https URLs.")
+    key = (request.authorization_url, request.token_url)
+    now = time.time()
+    cached = _probe_cache.get(key)
+    if cached and now - cached[0] < 600:
+        return {"results": cached[1], "cached": True}
+    check_rate_limit("probe:" + (http_request.client.host if http_request.client else "unknown"), limit=60)
+    results = await probe_endpoints(request.authorization_url, request.token_url)
+    if len(_probe_cache) > 200:
+        _probe_cache.clear()
+    _probe_cache[key] = (now, results)
+    return {"results": results, "cached": False}
 
 
 @app.get("/api/search")
@@ -125,11 +158,12 @@ RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "12"))
 _hits: dict[str, list[float]] = {}
 
 
-def check_rate_limit(ip: str) -> None:
+def check_rate_limit(ip: str, limit: int | None = None) -> None:
     now = time.time()
     recent = [t for t in _hits.get(ip, []) if now - t < 3600]
-    if len(recent) >= RATE_LIMIT_PER_HOUR:
-        raise HTTPException(status_code=429, detail=f"Rate limit reached ({RATE_LIMIT_PER_HOUR} generations per hour). Please try again later.")
+    cap = limit or RATE_LIMIT_PER_HOUR
+    if len(recent) >= cap:
+        raise HTTPException(status_code=429, detail=f"Rate limit reached ({cap} requests per hour). Please try again later.")
     recent.append(now)
     _hits[ip] = recent
 

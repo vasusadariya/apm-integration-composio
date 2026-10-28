@@ -1,0 +1,165 @@
+{
+  "app": "Asana",
+  "slug": "asana",
+  "website": "asana.com",
+  "logo_url": "https://www.google.com/s2/favicons?domain=asana.com&sz=128",
+  "generated_at": "2026-10-28T00:00:00+00:00",
+  "difficulty": "easy",
+  "setup_time_estimate": "30–60 minutes",
+  "approval_time_estimate": "No review step documented",
+  "requires_approval": false,
+  "composio_managed_auth": true,
+  "summary": "Asana apps are registered in the developer console; you set the name, redirect URL and scopes at registration and can change them later. Redirects must be HTTPS (localhost needs PKCE), scopes use a resource:action format, and access tokens last one hour with refresh tokens. The OAuth docs describe no review process, but the app must be available in a user's workspace before they can authorize it.",
+  "key_facts": [
+    "Register in the developer console (My apps) to get a client ID and secret; the secret can be reset from the OAuth tab",
+    "Non-native apps must use an HTTPS redirect URL; localhost and native redirects also require PKCE (S256)",
+    "Scopes use resource:action (e.g. tasks:read); requesting an unregistered scope returns forbidden_scopes; requests are not additive",
+    "You can instead enable Full permissions, but then individual scopes cannot be requested",
+    "Access tokens last 1 hour (expires_in 3600); refresh tokens renew them without user action",
+    "The token exchange must happen on your server because it needs the client secret"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create the app",
+      "description": "In the developer console open My apps and create an app to get the client ID and secret.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://app.asana.com/0/my-apps",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Set the redirect URL and scopes",
+      "description": "Register an HTTPS redirect URL (for Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback) and the scopes your app needs, or enable Full permissions.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": null,
+      "warnings": [
+        "Requested scopes must be on the registered list"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Make the app available to users",
+      "description": "The app must be available in the user's workspace before they can authorize it; see Asana's manage-distribution documentation.",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": null,
+      "warnings": []
+    },
+    {
+      "number": 4,
+      "title": "Authorize and exchange the code",
+      "description": "Send users to https://app.asana.com/-/oauth_authorize, then POST the code to https://app.asana.com/-/oauth_token from your server.",
+      "agent_can_do": true,
+      "estimated_time": "30 minutes",
+      "url": "https://app.asana.com/-/oauth_authorize",
+      "warnings": []
+    },
+    {
+      "number": 5,
+      "title": "Refresh tokens",
+      "description": "Exchange the refresh token with grant_type=refresh_token before the one-hour access token expires.",
+      "agent_can_do": true,
+      "estimated_time": "15 minutes",
+      "url": "https://app.asana.com/-/oauth_token",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Asana account with a workspace",
+    "needs_live_website": false,
+    "needs_privacy_policy": false,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": [
+      "tasks:read",
+      "projects:read",
+      "users:read"
+    ],
+    "restricted_scopes": []
+  },
+  "blockers": [
+    {
+      "title": "forbidden_scopes error",
+      "description": "Requesting a scope that is not on the app's registered list fails with forbidden_scopes.",
+      "severity": "warning",
+      "workaround": "Add the scope in the developer console or request a subset of the registered ones."
+    },
+    {
+      "title": "Distribution details are not on the OAuth page",
+      "description": "The OAuth documentation refers to a separate \"manage distribution\" page for making the app available to other workspaces.",
+      "severity": "info"
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Fetched and read https://developers.asana.com/docs/oauth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "7 claims confirmed, 0 corrected, 1 could not be verified.",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Asana OAuth documentation",
+      "url": "https://developers.asana.com/docs/oauth",
+      "type": "official_docs"
+    },
+    {
+      "title": "Composio managed OAuth directory",
+      "url": "https://docs.composio.dev/toolkits/managed-auth",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "next_step": "Open the Asana developer console, create an app, register an HTTPS redirect URL and your scopes, then test with a workspace you belong to.",
+  "if_blocked": [
+    {
+      "situation": "Users cannot authorize the app",
+      "action": "Make the app available in their workspace via Asana's manage-distribution settings.",
+      "url": "https://developers.asana.com/docs/oauth"
+    },
+    {
+      "situation": "forbidden_scopes",
+      "action": "Register the scope on the app or request fewer scopes."
+    }
+  ],
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://developers.asana.com/docs/oauth",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Apps are registered in the developer console (My apps); client secret can be reset from the OAuth tab",
+      "HTTPS redirect URLs; localhost/native need PKCE (S256)",
+      "Scopes use resource:action; forbidden_scopes when unregistered; requests are not additive",
+      "Access tokens last 1 hour; refresh tokens supported",
+      "Authorize https://app.asana.com/-/oauth_authorize; token https://app.asana.com/-/oauth_token",
+      "The OAuth page describes no app review process",
+      "Asana is listed as Composio-managed OAuth"
+    ],
+    "corrected": [],
+    "unverified": [
+      "Distribution / app-directory approval steps and timelines (separate page not checked)"
+    ]
+  },
+  "oauth_endpoints": {
+    "authorization_url": "https://app.asana.com/-/oauth_authorize",
+    "token_url": "https://app.asana.com/-/oauth_token"
+  }
+}

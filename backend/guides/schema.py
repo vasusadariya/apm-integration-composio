@@ -59,6 +59,11 @@ class Verification(BaseModel):
     unverified: list[str] = []
 
 
+class OAuthEndpoints(BaseModel):
+    authorization_url: str
+    token_url: Optional[str] = None
+
+
 class OAuthGuide(BaseModel):
     app: str
     slug: str
@@ -82,4 +87,5 @@ class OAuthGuide(BaseModel):
     next_step: Optional[str] = None
     if_blocked: list[IfBlocked] = []
     verification: Optional[Verification] = None
+    oauth_endpoints: Optional[OAuthEndpoints] = None
 

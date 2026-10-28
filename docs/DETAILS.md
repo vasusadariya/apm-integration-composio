@@ -15,7 +15,7 @@
 4. [Architecture](#4-architecture)
 5. [Local setup (step by step)](#5-local-setup-step-by-step)
 6. [Configuration reference](#6-configuration-reference)
-7. [The guide library (12 apps)](#7-the-guide-library-12-apps)
+7. [The guide library (17 apps)](#7-the-guide-library-17-apps)
 8. [The guide schema](#8-the-guide-schema)
 9. [The AI research agent](#9-the-ai-research-agent)
 10. [API reference](#10-api-reference)
@@ -134,10 +134,10 @@ The agent is deliberately **transparent**: each guide shows what was researched,
 | What an agent can do vs. where the developer takes over | ⚠️ Shown per step and explained in a legend; it is our assessment — the agent does not perform provider setup steps |
 | How to proceed when blocked | ✅ Blockers with workarounds plus an "If you get stuck" section |
 | Live generation for any app | ✅ `/generate`: streamed, time-bounded, resumable research with sources |
-| Agents investigate **and attempt** setup | ⚠️ Investigates and **tests** (link reachability, OAuth discovery probe). It does not register apps — see §18 |
+| Agents investigate **and attempt** setup | ✅/⚠️ Investigates, **tests** (link reachability, OAuth discovery, live OAuth endpoint probes) and prepares a **setup kit** (copy-paste values, Slack manifest with prefilled create-app link). It does not register apps — that needs the developer's account (§18) |
 | Clear about tested / source-supported / uncertain | ✅ Confidence badge, per-guide *What was verified* panel, [VERIFICATION.md](../VERIFICATION.md) |
-| Check a sample against real sources and report corrections | ✅ 10 guides checked; 9 corrections incl. wrong managed-auth flags — see [VERIFICATION.md](../VERIFICATION.md) |
-| Library of 100 apps | ⚠️ 12 (the assignment allows a demo subset) |
+| Check a sample against real sources and report corrections | ✅ 9 of the first 12 guides re-checked against official docs (all 17 checked for the managed-auth flag); 9 headline corrections incl. wrong managed-auth flags — see [VERIFICATION.md](../VERIFICATION.md) |
+| Library of 100 apps | ⚠️ 17 (the assignment allows a demo subset) |
 | README + no credentials | ✅ |
 
 ---
@@ -257,7 +257,7 @@ Start the API:
 uvicorn main:app --reload --port 8000
 ```
 
-Verify it works — open http://localhost:8000/api/guides. You should see JSON for 12 guides. Interactive API docs are at http://localhost:8000/docs.
+Verify it works — open http://localhost:8000/api/guides. You should see JSON for 17 guides. Interactive API docs are at http://localhost:8000/docs.
 
 ### Step 4 — Set up and start the frontend (Terminal 2)
 
@@ -321,15 +321,19 @@ The key is re-read from `.env` on every request, so you can fix it without resta
 
 ---
 
-## 7. The guide library (12 apps)
+## 7. The guide library (17 apps)
 
 Chosen to demonstrate the **full spectrum** of difficulty, not to be exhaustive.
 
 | App | Difficulty | Setup time | Approval | Review required | Composio managed auth | Confidence | Checked against docs |
 |---|---|---|---|---|---|---|---|
 | Airtable | 🟢 Easy | 30–60 minutes | Instant | No | Yes | Source Supported | No |
+| Asana | 🟢 Easy | 30–60 minutes | No review step documented | No | Yes | Source Supported | Yes |
+| Discord | 🟢 Easy | 30–60 minutes | None for basic scopes; some scopes need Discord approval | No | Yes | Source Supported | Yes |
 | GitHub | 🟢 Easy | 30–60 minutes | Instant | No | Yes | Verified | Yes |
+| Linear | 🟢 Easy | 30–60 minutes | No review step documented | No | Yes | Source Supported | Yes |
 | Dropbox | 🟡 Medium | 1–2 hours | 1–5 business days | Yes | Yes | Source Supported | Yes |
+| Figma | 🟡 Medium | 1–2 hours | Review required for public apps | Yes | Yes | Source Supported | Yes |
 | HubSpot | 🟡 Medium | 1–2 hours | 2–5 business days | No | Yes | Source Supported | Yes |
 | Microsoft | 🟡 Medium | 1–3 hours | Instant for personal accounts; 2–5 days for organizational access | No | Yes | Source Supported | No |
 | Notion | 🟡 Medium | 1–3 hours | Review required for public connections | Yes | Yes | Source Supported | Yes |
@@ -337,6 +341,7 @@ Chosen to demonstrate the **full spectrum** of difficulty, not to be exhaustive.
 | Twitter / X | 🟡 Medium | 1–2 hours | No review step documented; paid usage credits required | No | No | Source Supported | Yes |
 | LinkedIn | 🟠 Hard | 2–4 hours | 1–4 weeks | Yes | Yes | Source Supported | Yes |
 | Salesforce | 🟠 Hard | 3–6 hours | 1–3 weeks | No | Yes | Source Supported | No |
+| Stripe | 🟠 Hard | 3–6 hours | Marketplace review to publish | Yes | Yes | Source Supported | Yes |
 | Zoom | 🟠 Hard | 2–4 hours | Marketplace review for published apps | Yes | Yes | Uncertain | Yes |
 | Google | 🔴 Very Hard | 4–8 hours of active work | 4–6 weeks | Yes | Yes | Source Supported | Yes |
 
@@ -453,6 +458,13 @@ Implemented in `backend/agent/researcher.py` using the `google-genai` SDK.
 | **Machine checks (`agent/probe.py`)** | After generating, the agent fetches every URL the guide cites and probes `/.well-known/openid-configuration`. Results are written to the guide's agent log and *What was verified* panel. Private/loopback addresses are refused (SSRF guard). |
 | **Friendly errors** | Invalid key, rate limit (429) and parse failures each produce a specific message. |
 
+### What the agent can *do* for the developer (setup kit and live checks)
+
+The agent cannot create an app in a provider console — that needs the developer's own account, legal acceptance and often a human review. Within that limit it does everything that is practical (`backend/agent/setup.py`):
+
+- **Live endpoint check.** Sends deliberately invalid OAuth requests (an unregistered `client_id`, a bogus authorization code) to the provider's real authorization and token endpoints and classifies the answer: *rejects invalid request*, *sign-in first*, *responds*, *blocks bots*, or *not reachable*. Available on every guide (`POST /api/probe`), and run automatically on generated guides. Only public https URLs are allowed, redirects are not followed, and results are cached for 10 minutes.
+- **Setup kit.** Computed on read: the Composio redirect URI, the scopes from the guide, a Composio custom-auth config template, a link to the provider's registration page, and — where the provider documents it — a ready-made manifest: a **Slack app manifest** with a prefilled `api.slack.com/apps?new_app=1&manifest_json=…` link, and the OAuth fields of a **Stripe App manifest**. (GitHub documents prefilling only for GitHub Apps via a form POST, not for OAuth Apps, so no prefill link is offered there.)
+
 ---
 
 ## 10. API reference
@@ -466,7 +478,10 @@ Health check → `{"status": "ok", "version": "1.0.0"}`
 Summary cards for every library guide (`app, slug, website, logo_url, difficulty, setup_time_estimate, approval_time_estimate, requires_approval, composio_managed_auth, summary, confidence`).
 
 ### `GET /api/guides/{slug}`
-Full guide. Looks in the library first, then in `guides/generated/`. The slug must match `[a-z0-9-]+`; anything else (including path-traversal attempts) returns `404`.
+Full guide plus a computed `setup_kit`. Looks in the library first, then in `guides/generated/`. The slug must match `[a-z0-9-]+`; anything else (including path-traversal attempts) returns `404`.
+
+### `POST /api/probe`
+Body `{authorization_url, token_url?}` (https only). Live-tests the endpoints and returns `{results: [{endpoint, url, status, outcome, detail}], cached}`. Limited to 60 requests per hour per IP.
 
 ### `GET /api/search?q=<text>`
 Case-insensitive match on app name or website. An empty `q` returns everything.
@@ -603,7 +618,7 @@ Guides are semi-static reference content. JSON is portable, version-controlled, 
 **Why not just a static site?**
 Live generation needs a backend that can call an AI model with secrets. The hybrid gives instant library pages and dynamic capability for everything else.
 
-**Why 12 apps instead of 100?**
+**Why 17 apps instead of 100?**
 The assignment asks to demonstrate a few varied apps. A small, *well-structured* set that covers the full difficulty range shows the product better than a long list of shallow entries.
 
 **Why stream the agent's progress?**
@@ -627,7 +642,7 @@ An AI-written guide that nobody has cross-checked should not carry the same badg
 
 The full record is in **[VERIFICATION.md](../VERIFICATION.md)**; each guide also shows it in its *What was verified* section.
 
-**What I did (2026-10-28):** fetched the official documentation for 10 of the 12 providers plus the Composio managed-auth directory, compared them with the guides, and recorded what was confirmed, corrected or unverifiable. Salesforce's help page failed to load, and Microsoft and Airtable were only checked for the managed-auth flag.
+**What I did (2026-10-28):** fetched the official documentation for 9 of the first 12 providers (GitHub, Google, Slack, Notion, Zoom, LinkedIn, Twitter/X, HubSpot, Dropbox) plus the Composio managed-auth directory, compared them with the guides, and recorded what was confirmed, corrected or unverifiable. Salesforce's help page failed to load, and Microsoft and Airtable were only checked for the managed-auth flag. Five guides added afterwards (Linear, Discord, Asana, Figma, Stripe Apps) were written directly from the official docs, so 14 of 17 guides are doc-checked.
 
 **What it found:** the first version of the library had real errors, for example wrong Composio managed-auth flags for Twitter/X (not managed) and LinkedIn (is managed), an outdated X pricing/approval description, a Slack claim that any app installs anywhere without approval, outdated Zoom app types, and several review timelines and costs that no official page states. These were corrected or flagged *unverified*, and confidence badges were reduced to match: only GitHub is `verified`.
 
@@ -639,7 +654,7 @@ The full record is in **[VERIFICATION.md](../VERIFICATION.md)**; each guide also
 
 ## 17. Limitations and known issues
 
-- **Accuracy is point-in-time.** Provider consoles and policies change often. Ten library guides were checked on 2026-10-28; Salesforce, Microsoft and Airtable were not re-checked. There is no automated re-verification.
+- **Accuracy is point-in-time.** Provider consoles and policies change often. Fourteen of the 17 library guides were checked against official docs on 2026-10-28; Salesforce, Microsoft and Airtable were not re-checked. There is no automated re-verification.
 - **Generated quality varies.** Obscure providers with thin documentation produce lower-confidence guides.
 - **Library shortcut in `/generate`.** If the name matches a library app (including aliases like "Gmail", "Azure", "X"), the stored guide is returned with simulated progress messages rather than a fresh research run. This is faster and more accurate, but it is not live research.
 - **Generated guides are not durable on free hosting** (ephemeral disk). Share links embed the guide in the URL fragment so they keep working, but the server copy is lost on restart.

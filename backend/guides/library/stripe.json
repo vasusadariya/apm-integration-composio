@@ -1,0 +1,163 @@
+{
+  "app": "Stripe (Apps)",
+  "slug": "stripe",
+  "website": "stripe.com",
+  "logo_url": "https://www.google.com/s2/favicons?domain=stripe.com&sz=128",
+  "generated_at": "2026-10-28T00:00:00+00:00",
+  "difficulty": "hard",
+  "setup_time_estimate": "3–6 hours",
+  "approval_time_estimate": "Marketplace review to publish (timeline not published)",
+  "requires_approval": true,
+  "composio_managed_auth": true,
+  "summary": "OAuth for Stripe Apps lets users install your app and grant it access to their account. You build the app with the Stripe CLI, set stripe_api_access_type to oauth and distribution_type to public in the manifest, test it with external test links, then submit it for review to publish on the Stripe App Marketplace. Authorization codes last 5 minutes, access tokens 1 hour and refresh tokens 1 year.",
+  "key_facts": [
+    "This guide covers Stripe Apps OAuth (install links) — not the older Connect OAuth flow",
+    "Manifest must set stripe_api_access_type=oauth, distribution_type=public and allowed_redirect_uris (the first is the default redirect)",
+    "You can test before publishing via the External test tab (test OAuth links; different links exist for live, test and sandbox)",
+    "Public OAuth install links do not work until the app is published; Stripe's review team can still install and test via that link",
+    "Authorization codes are one-time use and valid for 5 minutes; the backend exchanges them using your secret API key",
+    "Access tokens expire in 1 hour; refresh tokens expire after 1 year and are rolled on every exchange",
+    "Live-mode redirect_uri must use HTTPS; redirect_uri must exactly match one in the manifest"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create the Stripe App",
+      "description": "Install the Stripe CLI and run `stripe apps create <app-name>`.",
+      "agent_can_do": true,
+      "estimated_time": "30 minutes",
+      "url": "https://docs.stripe.com/stripe-apps/create-app",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Configure the manifest for OAuth",
+      "description": "Set stripe_api_access_type to oauth, distribution_type to public and allowed_redirect_uris (for Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback); add the permissions your app needs.",
+      "agent_can_do": true,
+      "estimated_time": "30 minutes",
+      "url": "https://docs.stripe.com/stripe-apps/reference/app-manifest",
+      "warnings": []
+    },
+    {
+      "number": 3,
+      "title": "Upload and run an external test",
+      "description": "Run `stripe apps upload`, open the app details page, and use the External test tab to get test OAuth links.",
+      "agent_can_do": true,
+      "estimated_time": "30 minutes",
+      "url": "https://docs.stripe.com/stripe-apps/test-app",
+      "warnings": []
+    },
+    {
+      "number": 4,
+      "title": "Build the install link and exchange codes",
+      "description": "Redirect users to https://marketplace.stripe.com/oauth/v2/authorize?client_id=…&redirect_uri=…&state=… then POST the one-time code (5 min) to https://api.stripe.com/v1/oauth/token using your secret key.",
+      "agent_can_do": true,
+      "estimated_time": "1–2 hours",
+      "url": "https://marketplace.stripe.com/oauth/v2/authorize",
+      "warnings": [
+        "Use the API key that matches the link type (live, test or sandbox)"
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Submit for review",
+      "description": "Submit the app for Marketplace review, providing an install URL that starts the onboarding/installation flow using the public OAuth links from the Settings tab.",
+      "agent_can_do": false,
+      "estimated_time": "1 hour",
+      "url": "https://docs.stripe.com/stripe-apps/publish-app",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Stripe account (with the Stripe CLI)",
+    "needs_live_website": true,
+    "needs_privacy_policy": false,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": [],
+    "restricted_scopes": []
+  },
+  "blockers": [
+    {
+      "title": "Public links are inactive until publish",
+      "description": "The public OAuth install links do not work until the app is published, so you must use external test links while developing.",
+      "severity": "warning",
+      "workaround": "Use the External test tab links; Stripe reviewers can install via the public link during review."
+    },
+    {
+      "title": "Review timeline unknown",
+      "description": "Stripe publishes no review duration on the pages checked.",
+      "severity": "info"
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Fetched and read https://docs.stripe.com/stripe-apps/api-authentication/oauth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "7 claims confirmed, 0 corrected, 2 could not be verified.",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Stripe Apps OAuth",
+      "url": "https://docs.stripe.com/stripe-apps/api-authentication/oauth",
+      "type": "official_docs"
+    },
+    {
+      "title": "Composio managed OAuth directory",
+      "url": "https://docs.composio.dev/toolkits/managed-auth",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "next_step": "Install the Stripe CLI, run `stripe apps create`, and set the OAuth fields in the app manifest — then use the External test link to try an install.",
+  "if_blocked": [
+    {
+      "situation": "Install link does not work",
+      "action": "Use the External test link until the app is published; public links only work after publish (reviewers can still use them).",
+      "url": "https://docs.stripe.com/stripe-apps/api-authentication/oauth"
+    },
+    {
+      "situation": "Token exchange errors",
+      "action": "Use the secret API key that matches the link type (live, test or sandbox), and exchange the code within 5 minutes."
+    }
+  ],
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://docs.stripe.com/stripe-apps/api-authentication/oauth",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Manifest fields: stripe_api_access_type=oauth, distribution_type=public, allowed_redirect_uris",
+      "External test links for testing before publishing",
+      "Install link https://marketplace.stripe.com/oauth/v2/authorize with client_id, redirect_uri, state",
+      "Code valid 5 minutes, one-time use; exchange at https://api.stripe.com/v1/oauth/token with the secret key",
+      "Access token 1 hour; refresh token 1 year, rolled on every exchange",
+      "Submitting for review is required to publish on the Marketplace",
+      "Stripe is listed as Composio-managed OAuth (the separate \"Stripe MCP\" entry is bring-your-own)"
+    ],
+    "corrected": [],
+    "unverified": [
+      "Marketplace review duration and acceptance criteria",
+      "Differences from Stripe Connect OAuth (not covered by the page checked)"
+    ]
+  },
+  "oauth_endpoints": {
+    "authorization_url": "https://marketplace.stripe.com/oauth/v2/authorize",
+    "token_url": "https://api.stripe.com/v1/oauth/token"
+  }
+}
