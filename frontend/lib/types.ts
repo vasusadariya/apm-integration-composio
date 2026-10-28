@@ -69,3 +69,6 @@ export type GuideCard = Pick<OAuthGuide,
   | 'summary' | 'confidence'
 >;
 
+
+/** "Google (Gmail / Drive / Calendar)" → "Google"; "Instant (no approval)" → "Instant" */
+export const shortName = (s: string) => s.split(' (')[0];
