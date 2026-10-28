@@ -24,11 +24,16 @@ export default function GuidePage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16">
-        <div className="space-y-4">
-          <div className="h-10 w-64 rounded-xl shimmer" />
-          <div className="h-4 w-full rounded shimmer" />
-          <div className="h-4 w-3/4 rounded shimmer" />
+      <div className="bg-ink pb-24 pt-32 text-white">
+        <div className="mx-auto max-w-5xl space-y-5 px-4 sm:px-6">
+          <div className="shimmer-dark h-5 w-28" />
+          <div className="flex gap-6">
+            <div className="shimmer-dark h-[72px] w-[72px]" />
+            <div className="shimmer-dark h-16 w-80" />
+          </div>
+          <div className="shimmer-dark h-5 w-full max-w-3xl" />
+          <div className="shimmer-dark h-5 w-2/3" />
+          <div className="shimmer-dark mt-8 h-24 w-full" />
         </div>
       </div>
     );
@@ -36,9 +41,14 @@ export default function GuidePage() {
 
   if (error || !guide) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <p className="text-red-600 font-medium">{error || 'Guide not found'}</p>
-        <Link href="/" className="mt-4 inline-block text-blue-600 hover:underline">← Back to library</Link>
+      <div className="bg-ink px-4 pb-32 pt-44 text-center text-white">
+        <p className="eyebrow-dark mb-4">404</p>
+        <h1 className="text-4xl font-medium">Guide not found</h1>
+        <p className="mx-auto mt-4 max-w-md text-white/60">{error || 'This guide does not exist.'}</p>
+        <div className="mt-8 flex justify-center gap-3">
+          <Link href="/" className="btn-light">← Back to library</Link>
+          <Link href="/generate" className="btn-ghost">Generate it</Link>
+        </div>
       </div>
     );
   }
