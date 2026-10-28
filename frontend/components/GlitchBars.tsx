@@ -1,9 +1,11 @@
 // Decorative "signal" bars echoing the composio.dev hero. Deterministic so SSR/CSR match.
 const COLORS = ['#2f6bff', '#22c55e', '#06b6d4', '#a855f7', '#3b82f6', '#14b8a6', '#6366f1'];
 
+// Rounded so server and client produce byte-identical style strings
+// (Math.sin can differ in the last digits between Node and browsers).
 function rand(i: number, salt: number) {
   const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
-  return x - Math.floor(x);
+  return Math.round((x - Math.floor(x)) * 100) / 100;
 }
 
 function Cluster({ count, salt, flip }: { count: number; salt: number; flip?: boolean }) {
@@ -17,18 +19,19 @@ function Cluster({ count, salt, flip }: { count: number; salt: number; flip?: bo
       aria-hidden
     >
       {Array.from({ length: count }).map((_, i) => {
-        const h = 18 + rand(i, salt) * 62; // %
-        const shift = (rand(i, salt + 3) - 0.5) * 36; // vertical offset %
-        const fade = 1 - i / count;
+        const h = Math.round(18 + rand(i, salt) * 62); // %
+        const shift = Math.round((rand(i, salt + 3) - 0.5) * 36); // vertical offset %
+        const fade = Math.round((1 - i / count) * 100) / 100;
         return (
           <span
             key={i}
+            suppressHydrationWarning
             className="block w-[7px] flex-none origin-center animate-bar rounded-[1px] sm:w-[9px]"
             style={{
               height: `${h}%`,
               transform: `translateY(${shift}%)`,
               background: COLORS[Math.floor(rand(i, salt + 7) * COLORS.length)],
-              opacity: 0.25 + fade * 0.6,
+              opacity: (0.25 + fade * 0.6).toFixed(2),
               animationDelay: `${(rand(i, salt + 11) * 3).toFixed(2)}s`,
               animationDuration: `${(2.4 + rand(i, salt + 5) * 2.4).toFixed(2)}s`,
             }}
