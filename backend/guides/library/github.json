@@ -173,5 +173,9 @@
       "action": "Create a GitHub App instead of an OAuth App.",
       "url": "https://docs.github.com/en/apps/creating-github-apps"
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://github.com/login/oauth/authorize",
+    "token_url": "https://github.com/login/oauth/access_token"
+  }
 }

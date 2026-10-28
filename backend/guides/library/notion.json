@@ -168,5 +168,9 @@
       "situation": "Your app cannot see a page",
       "action": "The user must share that page (or its parent) with the connection during authorization."
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://api.notion.com/v1/oauth/authorize",
+    "token_url": "https://api.notion.com/v1/oauth/token"
+  }
 }

@@ -6,6 +6,7 @@ import { shortName, type OAuthGuide, type Step, type Blocker } from '@/lib/types
 import GlitchBars from './GlitchBars';
 import Reveal from './Reveal';
 import AppLogo from './AppLogo';
+import SetupKit from './SetupKit';
 import { download, encodeGuide, guideToMarkdown } from '@/lib/share';
 import DifficultyBadge, { DifficultyMeter } from './DifficultyBadge';
 
@@ -20,6 +21,7 @@ const CONFIDENCE: Record<string, { label: string; cls: string }> = {
 
 const SECTIONS = [
   { id: 'steps', label: 'Steps' },
+  { id: 'kit', label: 'Setup kit' },
   { id: 'requirements', label: 'Requirements' },
   { id: 'blockers', label: 'Blockers' },
   { id: 'stuck', label: 'If you’re stuck' },
@@ -191,7 +193,8 @@ export default function GuideDetail({
   const conf = CONFIDENCE[guide.confidence] ?? { label: guide.confidence, cls: 'border-white/25 text-white/60' };
   const req = guide.requirements;
   const sectionVisible = (id: string) =>
-    id === 'blockers' ? guide.blockers?.length > 0
+    id === 'kit' ? !!(guide.setup_kit || guide.oauth_endpoints)
+    : id === 'blockers' ? guide.blockers?.length > 0
     : id === 'stuck' ? (guide.if_blocked?.length ?? 0) > 0
     : id === 'verification' ? !!guide.verification
     : id === 'agent' ? guide.agent_actions?.length > 0
@@ -362,6 +365,16 @@ export default function GuideDetail({
             ))}
           </div>
         </section>
+
+        {/* Setup kit */}
+        {(guide.setup_kit || guide.oauth_endpoints) && (
+          <section className="mb-20">
+            <SectionTitle id="kit" eyebrow="Do it for me" title="Setup kit & live check" />
+            <Reveal>
+              <SetupKit guide={guide} />
+            </Reveal>
+          </section>
+        )}
 
         {/* Requirements */}
         <section className="mb-20">

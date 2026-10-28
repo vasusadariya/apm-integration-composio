@@ -2,6 +2,8 @@
 
 Date of this pass: **2026-10-28**. Method: for each guide I fetched the provider's official documentation (and the [Composio managed-auth directory](https://docs.composio.dev/toolkits/managed-auth)), compared it with what the guide claimed, and recorded what was **confirmed**, **corrected**, or **could not be verified**. The same record is shown inside every guide under *What was verified*.
 
+Five guides added later (Linear, Discord, Asana, Figma, Stripe Apps) were written directly from the official docs, so they have no "corrected" items. Live endpoint tests (see below) were also run against all 17 providers' OAuth authorization and token endpoints.
+
 **What this is not:** I did not register OAuth apps with any provider or click through their consoles. Documentation was read through an automated fetch-and-summarise tool, so a page that failed to load or that omits a topic is reported as *unverified*, never assumed correct.
 
 ## Summary
@@ -9,15 +11,20 @@ Date of this pass: **2026-10-28**. Method: for each guide I fetched the provider
 | Guide | Status | Confirmed | Corrected | Unverified |
 |---|---|---|---|---|
 | Airtable | Not re-checked | 1 | 0 | 1 |
+| Asana | Checked against docs | 7 | 0 | 1 |
+| Discord | Checked against docs | 7 | 0 | 2 |
 | Dropbox | Checked against docs | 4 | 0 | 1 |
+| Figma | Checked against docs | 6 | 0 | 2 |
 | GitHub | Checked against docs | 5 | 3 | 2 |
 | Google | Checked against docs | 8 | 2 | 3 |
 | HubSpot | Checked against docs | 4 | 1 | 2 |
+| Linear | Checked against docs | 7 | 0 | 2 |
 | LinkedIn | Checked against docs | 5 | 2 | 3 |
 | Microsoft | Not re-checked | 1 | 0 | 1 |
 | Notion | Checked against docs | 5 | 3 | 2 |
 | Salesforce | Not re-checked | 1 | 0 | 2 |
 | Slack | Checked against docs | 5 | 3 | 2 |
+| Stripe | Checked against docs | 7 | 0 | 2 |
 | Twitter / X | Checked against docs | 4 | 4 | 3 |
 | Zoom | Checked against docs | 6 | 2 | 2 |
 
@@ -45,6 +52,35 @@ These were wrong in the first version of the library and are fixed:
 - **Could not verify:**
   - ❓ Setup steps, requirements and approval timeline were written from public documentation and have NOT been re-checked against live sources in this verification pass
 
+### Asana
+- **Status:** Checked against docs · **Confidence:** `source_supported` · **Managed auth flag:** `True`
+- **Checked against:** <https://developers.asana.com/docs/oauth>, <https://docs.composio.dev/toolkits/managed-auth>
+- **Confirmed:**
+  - ✅ Apps are registered in the developer console (My apps); client secret can be reset from the OAuth tab
+  - ✅ HTTPS redirect URLs; localhost/native need PKCE (S256)
+  - ✅ Scopes use resource:action; forbidden_scopes when unregistered; requests are not additive
+  - ✅ Access tokens last 1 hour; refresh tokens supported
+  - ✅ Authorize https://app.asana.com/-/oauth_authorize; token https://app.asana.com/-/oauth_token
+  - ✅ The OAuth page describes no app review process
+  - ✅ Asana is listed as Composio-managed OAuth
+- **Could not verify:**
+  - ❓ Distribution / app-directory approval steps and timelines (separate page not checked)
+
+### Discord
+- **Status:** Checked against docs · **Confidence:** `source_supported` · **Managed auth flag:** `True`
+- **Checked against:** <https://docs.discord.com/developers/topics/oauth2>, <https://docs.composio.dev/toolkits/managed-auth>
+- **Confirmed:**
+  - ✅ Applications are registered to obtain client_id/client_secret; a bot user is added automatically
+  - ✅ Some scopes require Discord approval and are partner-only
+  - ✅ Authorize https://discord.com/oauth2/authorize; token https://discord.com/api/oauth2/token
+  - ✅ Requests must be application/x-www-form-urlencoded
+  - ✅ Discovery documents are published at /.well-known/oauth-authorization-server and /.well-known/openid-configuration
+  - ✅ Example token lifetime is 7 days with refresh tokens
+  - ✅ Discord is listed as Composio-managed OAuth
+- **Could not verify:**
+  - ❓ Bot verification requirements and timeline (page only links to a guide)
+  - ❓ App-level review for public distribution of non-bot OAuth apps
+
 ### Dropbox
 - **Status:** Checked against docs · **Confidence:** `source_supported` · **Managed auth flag:** `True`
 - **Checked against:** <https://docs.dropboxapi.com/dropbox-api/docs/oauth>, <https://docs.composio.dev/toolkits/managed-auth>
@@ -55,6 +91,20 @@ These were wrong in the first version of the library and are fixed:
   - ✅ Dropbox is listed as Composio-managed OAuth
 - **Could not verify:**
   - ❓ Development vs production status, user limits and production-approval timeline (1–5 days) — the page checked does not cover them
+
+### Figma
+- **Status:** Checked against docs · **Confidence:** `source_supported` · **Managed auth flag:** `True`
+- **Checked against:** <https://developers.figma.com/docs/rest-api/oauth-apps/>, <https://developers.figma.com/docs/rest-api/authentication/>, <https://docs.composio.dev/toolkits/managed-auth>
+- **Confirmed:**
+  - ✅ App creation under My Apps, associated with a team/org; secret shown once
+  - ✅ Redirect URLs and scopes are configured on the app; authorization may request a subset of scopes
+  - ✅ Draft apps authorize only you and plan admins; private apps publish without review; public apps need review
+  - ✅ Authorize https://www.figma.com/oauth; token https://api.figma.com/v1/oauth/token; refresh https://api.figma.com/v1/oauth/refresh
+  - ✅ Codes expire after 30 seconds; access tokens last 90 days
+  - ✅ Figma is listed as Composio-managed OAuth
+- **Could not verify:**
+  - ❓ Public-app review duration and criteria
+  - ❓ Whether a privacy policy or website is mandatory for public apps (the page lists a description, logo and testing instructions)
 
 ### GitHub
 - **Status:** Checked against docs · **Confidence:** `verified` · **Managed auth flag:** `True`
@@ -106,6 +156,21 @@ These were wrong in the first version of the library and are fixed:
 - **Could not verify:**
   - ❓ Whether HubSpot reviews a public app before customer installs, and the 2–5 day timeline (page does not cover it)
   - ❓ Step-by-step app creation in the portal (page does not cover it)
+
+### Linear
+- **Status:** Checked against docs · **Confidence:** `source_supported` · **Managed auth flag:** `True`
+- **Checked against:** <https://linear.app/developers/oauth-2-0-authentication>, <https://docs.composio.dev/toolkits/managed-auth>
+- **Confirmed:**
+  - ✅ OAuth applications are created at linear.app/settings/api/applications/new with redirect callback URLs
+  - ✅ Scopes: read (default), write, narrower scopes, admin
+  - ✅ actor=user vs actor=app
+  - ✅ Authorization-code tokens last 24 hours; refresh token flow with 30-minute grace period
+  - ✅ Client-credentials tokens last 30 days and must be enabled
+  - ✅ Authorize endpoint linear.app/oauth/authorize; token endpoint api.linear.app/oauth/token
+  - ✅ Linear is listed as Composio-managed OAuth (the separate "Linear MCP" entry is bring-your-own)
+- **Could not verify:**
+  - ❓ Whether a website, privacy policy or review is needed to list the app publicly (the page describes none)
+  - ❓ Rate limits and plan restrictions
 
 ### LinkedIn
 - **Status:** Checked against docs · **Confidence:** `source_supported` · **Managed auth flag:** `True`
@@ -175,6 +240,21 @@ These were wrong in the first version of the library and are fixed:
   - ❓ The 1–7 day App Directory review timeline (no timeline on the pages checked)
   - ❓ Socket Mode and paid-plan requirement for admin scopes (not on the pages checked)
 
+### Stripe
+- **Status:** Checked against docs · **Confidence:** `source_supported` · **Managed auth flag:** `True`
+- **Checked against:** <https://docs.stripe.com/stripe-apps/api-authentication/oauth>, <https://docs.composio.dev/toolkits/managed-auth>
+- **Confirmed:**
+  - ✅ Manifest fields: stripe_api_access_type=oauth, distribution_type=public, allowed_redirect_uris
+  - ✅ External test links for testing before publishing
+  - ✅ Install link https://marketplace.stripe.com/oauth/v2/authorize with client_id, redirect_uri, state
+  - ✅ Code valid 5 minutes, one-time use; exchange at https://api.stripe.com/v1/oauth/token with the secret key
+  - ✅ Access token 1 hour; refresh token 1 year, rolled on every exchange
+  - ✅ Submitting for review is required to publish on the Marketplace
+  - ✅ Stripe is listed as Composio-managed OAuth (the separate "Stripe MCP" entry is bring-your-own)
+- **Could not verify:**
+  - ❓ Marketplace review duration and acceptance criteria
+  - ❓ Differences from Stripe Connect OAuth (not covered by the page checked)
+
 ### Twitter / X
 - **Status:** Checked against docs · **Confidence:** `source_supported` · **Managed auth flag:** `False`
 - **Checked against:** <https://docs.x.com/resources/fundamentals/developer-portal>, <https://docs.composio.dev/toolkits/managed-auth>
@@ -216,6 +296,10 @@ These were wrong in the first version of the library and are fixed:
 - **Microsoft, Airtable, Salesforce:** only the managed-auth flag was checked; steps and timelines were not re-checked.
 - **Review timelines everywhere:** providers rarely publish them; any number shown is labelled community-reported or unverified.
 - **Live provider consoles:** no real registration was attempted, so UI-level steps (button names, field order) are as documented, not as observed.
+
+## Live endpoint tests
+
+For every library guide the agent can send deliberately invalid OAuth requests (an unregistered `client_id`, a bogus authorization code) to the provider's real authorization and token endpoints (`POST /api/probe`, shown as *Live endpoint check* on each guide). On 2026-10-28 all 17 providers' endpoints responded; 16 of 17 token endpoints rejected the invalid credentials with an OAuth error (GitHub answered HTTP 415 to the form post), and GitHub's authorization endpoint returned HTTP 403 to the automated request. This confirms the endpoints are live and registration is enforced; it does not test any account-specific flow.
 
 ## Machine checks on generated guides
 

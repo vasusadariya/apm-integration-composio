@@ -171,5 +171,9 @@
       "situation": "Lost the API key or secret",
       "action": "Regenerate it in the app settings — this invalidates the old credentials, so update everywhere they are used."
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://x.com/i/oauth2/authorize",
+    "token_url": "https://api.x.com/2/oauth2/token"
+  }
 }

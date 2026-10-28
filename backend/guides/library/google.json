@@ -237,5 +237,9 @@
       "action": "Verify the domain in Google Search Console with the same Google account that owns the Cloud project.",
       "url": "https://search.google.com/search-console"
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://accounts.google.com/o/oauth2/v2/auth",
+    "token_url": "https://oauth2.googleapis.com/token"
+  }
 }

@@ -126,5 +126,9 @@
       "situation": "A base is not accessible after authorizing",
       "action": "Airtable grants access per base/workspace; have the user re-authorize and select the base."
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://airtable.com/oauth2/v1/authorize",
+    "token_url": "https://airtable.com/oauth2/v1/token"
+  }
 }

@@ -178,5 +178,9 @@
       "situation": "Only need access to your own account",
       "action": "Use a Server-to-Server OAuth app — no user consent or publishing needed."
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://zoom.us/oauth/authorize",
+    "token_url": "https://zoom.us/oauth/token"
+  }
 }

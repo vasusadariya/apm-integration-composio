@@ -155,5 +155,9 @@
       "action": "Ask a tenant admin to grant consent, or reduce permissions to those users can consent to themselves.",
       "url": "https://entra.microsoft.com"
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+    "token_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+  }
 }

@@ -168,5 +168,9 @@
       "situation": "Login fails against sandbox or custom domain",
       "action": "Use the correct login host (login.salesforce.com, test.salesforce.com or the My Domain URL) for each org."
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://login.salesforce.com/services/oauth2/authorize",
+    "token_url": "https://login.salesforce.com/services/oauth2/token"
+  }
 }

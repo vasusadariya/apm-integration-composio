@@ -1,0 +1,181 @@
+{
+  "app": "Figma",
+  "slug": "figma",
+  "website": "figma.com",
+  "logo_url": "https://www.google.com/s2/favicons?domain=figma.com&sz=128",
+  "generated_at": "2026-10-28T00:00:00+00:00",
+  "difficulty": "medium",
+  "setup_time_estimate": "1–2 hours",
+  "approval_time_estimate": "Review required for public apps (timeline not published)",
+  "requires_approval": true,
+  "composio_managed_auth": true,
+  "summary": "Figma OAuth apps are created under My Apps and must belong to a team or organization. A new app is a draft that only you and plan admins can authorize; private apps can be published without review for your own team or org, while public apps need Figma's review with a description, logo and testing instructions. Authorization codes expire after 30 seconds and access tokens last 90 days.",
+  "key_facts": [
+    "Create the app at figma.com/developers/apps; it must be associated with a team or organization",
+    "The client secret is shown only once",
+    "Draft apps can only authorize you and your plan admins",
+    "Private apps publish without Figma review and work for the associated team/org; public apps require review (description, logo, testing instructions)",
+    "Authorization codes expire after 30 seconds — exchange immediately",
+    "Access tokens last 90 days; Figma keeps only one access token per app per user, and refreshing invalidates the previous one",
+    "Authorization must happen in a regular browser; embedded WebViews are not supported"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Create the app",
+      "description": "Go to My Apps, click Create a new app, name it, and associate a team or organization. Save the client ID and secret (the secret is shown once).",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": "https://www.figma.com/developers/apps",
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Register redirect URLs and scopes",
+      "description": "On the OAuth credentials page add your redirect URLs (for Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback); on the scopes page select the scopes matching the endpoints you call (e.g. file_content:read).",
+      "agent_can_do": false,
+      "estimated_time": "15 minutes",
+      "url": null,
+      "warnings": []
+    },
+    {
+      "number": 3,
+      "title": "Choose visibility and publish",
+      "description": "Private apps can be published without review for your team/org. Public apps must be submitted for Figma review with a description, logo and testing instructions.",
+      "agent_can_do": false,
+      "estimated_time": "30 minutes",
+      "url": null,
+      "warnings": [
+        "Public apps wait on Figma review — the timeline is not published"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Authorize and exchange the code",
+      "description": "Send users to https://www.figma.com/oauth, then POST to https://api.figma.com/v1/oauth/token within 30 seconds (HTTP Basic with client ID and secret).",
+      "agent_can_do": true,
+      "estimated_time": "30 minutes",
+      "url": "https://www.figma.com/oauth",
+      "warnings": []
+    },
+    {
+      "number": 5,
+      "title": "Refresh tokens",
+      "description": "POST to https://api.figma.com/v1/oauth/refresh with the refresh_token; always store the newest access token.",
+      "agent_can_do": true,
+      "estimated_time": "15 minutes",
+      "url": "https://api.figma.com/v1/oauth/refresh",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Figma account in a team or organization",
+    "needs_live_website": true,
+    "needs_privacy_policy": false,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": [
+      "file_content:read"
+    ],
+    "restricted_scopes": []
+  },
+  "blockers": [
+    {
+      "title": "Draft apps only work for you and plan admins",
+      "description": "Until the app is published, other users (even teammates outside the admin group) cannot authorize it.",
+      "severity": "warning",
+      "workaround": "Publish as private for internal use, or submit as public for review."
+    },
+    {
+      "title": "Public review",
+      "description": "Public apps require Figma review with a description, logo and testing instructions; no timeline is published.",
+      "severity": "warning",
+      "workaround": "Prepare testing instructions up front."
+    },
+    {
+      "title": "One token per user",
+      "description": "Figma keeps one access token per app per user; refreshing invalidates the previous one.",
+      "severity": "info"
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Fetched and read https://developers.figma.com/docs/rest-api/oauth-apps/",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Fetched and read https://developers.figma.com/docs/rest-api/authentication/",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "6 claims confirmed, 0 corrected, 2 could not be verified.",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Figma OAuth apps",
+      "url": "https://developers.figma.com/docs/rest-api/oauth-apps/",
+      "type": "official_docs"
+    },
+    {
+      "title": "Figma REST API authentication",
+      "url": "https://developers.figma.com/docs/rest-api/authentication/",
+      "type": "official_docs"
+    },
+    {
+      "title": "Composio managed OAuth directory",
+      "url": "https://docs.composio.dev/toolkits/managed-auth",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "next_step": "Create the app under My Apps (pick a team/org), register your redirect URL and scopes, and test as the owner while the app is a draft.",
+  "if_blocked": [
+    {
+      "situation": "Teammates cannot authorize the app",
+      "action": "Publish it as a private app (no review) or submit it as public.",
+      "url": "https://developers.figma.com/docs/rest-api/oauth-apps/"
+    },
+    {
+      "situation": "Token exchange fails",
+      "action": "Exchange the code within 30 seconds using the exact registered redirect URL."
+    }
+  ],
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://developers.figma.com/docs/rest-api/oauth-apps/",
+      "https://developers.figma.com/docs/rest-api/authentication/",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "App creation under My Apps, associated with a team/org; secret shown once",
+      "Redirect URLs and scopes are configured on the app; authorization may request a subset of scopes",
+      "Draft apps authorize only you and plan admins; private apps publish without review; public apps need review",
+      "Authorize https://www.figma.com/oauth; token https://api.figma.com/v1/oauth/token; refresh https://api.figma.com/v1/oauth/refresh",
+      "Codes expire after 30 seconds; access tokens last 90 days",
+      "Figma is listed as Composio-managed OAuth"
+    ],
+    "corrected": [],
+    "unverified": [
+      "Public-app review duration and criteria",
+      "Whether a privacy policy or website is mandatory for public apps (the page lists a description, logo and testing instructions)"
+    ]
+  },
+  "oauth_endpoints": {
+    "authorization_url": "https://www.figma.com/oauth",
+    "token_url": "https://api.figma.com/v1/oauth/token"
+  }
+}

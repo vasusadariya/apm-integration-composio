@@ -145,5 +145,9 @@
       "situation": "Install fails for a customer",
       "action": "Ask a Super Admin with access to all requested scopes to install, or move non-essential scopes to optional_scope."
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://app.hubspot.com/oauth/authorize",
+    "token_url": "https://api.hubapi.com/oauth/v1/token"
+  }
 }

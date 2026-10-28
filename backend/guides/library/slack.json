@@ -185,5 +185,9 @@
       "situation": "unapproved_scope",
       "action": "Remove the scope, or submit it for review as part of your distribution/listing."
     }
-  ]
+  ],
+  "oauth_endpoints": {
+    "authorization_url": "https://slack.com/oauth/v2/authorize",
+    "token_url": "https://slack.com/api/oauth.v2.access"
+  }
 }

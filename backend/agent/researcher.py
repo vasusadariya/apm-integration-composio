@@ -95,6 +95,10 @@ Investigate and produce a complete JSON guide with this EXACT structure:
   ],
   "confidence": "<source_supported|inferred|uncertain>",
   "last_verified": "<YYYY-MM-DD>",
+  "oauth_endpoints": {{
+    "authorization_url": "<the provider's OAuth authorization endpoint URL, only if you found it in the docs>",
+    "token_url": "<the provider's OAuth token endpoint URL, only if you found it in the docs>"
+  }},
   "next_step": "<one sentence: the very first thing the developer should do right now>",
   "if_blocked": [
     {{
@@ -143,6 +147,12 @@ def normalize_guide(data: dict, app_name: str, grounded_sources: list[dict]) -> 
         if src["url"] not in seen:
             data.setdefault("sources", []).append(src)
             seen.add(src["url"])
+    eps = data.get("oauth_endpoints")
+    if not (isinstance(eps, dict) and str(eps.get("authorization_url", "")).startswith("https://")):
+        data["oauth_endpoints"] = None
+    else:
+        data["oauth_endpoints"] = {"authorization_url": eps["authorization_url"],
+                                   "token_url": eps.get("token_url") if str(eps.get("token_url", "")).startswith("https://") else None}
     data.pop("verification", None)  # only machine checks (agent/probe.py) may populate this
     data["if_blocked"] = [b for b in data.get("if_blocked", []) if isinstance(b, dict) and b.get("situation") and b.get("action")]
     for b in data["if_blocked"]:
@@ -182,6 +192,12 @@ def find_matching_library_guide(app_name: str) -> dict | None:
         "azure": "microsoft",
         "outlook": "microsoft",
         "airtable": "airtable",
+        "linear": "linear",
+        "discord": "discord",
+        "asana": "asana",
+        "figma": "figma",
+        "stripe": "stripe",
+        "stripe apps": "stripe",
     }
     matched_slug = slug_map.get(clean)
     if matched_slug:

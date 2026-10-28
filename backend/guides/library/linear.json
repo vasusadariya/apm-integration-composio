@@ -1,0 +1,167 @@
+{
+  "app": "Linear",
+  "slug": "linear",
+  "website": "linear.app",
+  "logo_url": "https://www.google.com/s2/favicons?domain=linear.app&sz=128",
+  "generated_at": "2026-10-28T00:00:00+00:00",
+  "difficulty": "easy",
+  "setup_time_estimate": "30–60 minutes",
+  "approval_time_estimate": "No review step documented",
+  "requires_approval": false,
+  "composio_managed_auth": true,
+  "summary": "Linear OAuth apps are self-serve: create an OAuth application in your workspace's API settings, add redirect URLs, and request scopes. Tokens from the authorization-code flow last 24 hours and are refreshed with a refresh token; an app-actor mode lets agents act as the application itself. Linear's docs describe no review or approval step.",
+  "key_facts": [
+    "Create the app in a dedicated workspace — every admin of that workspace gets access to the app",
+    "Scopes: read (default, always included), write, narrower ones such as issues:create or comments:create, and admin (request only if essential)",
+    "actor=user (default) acts as the authorizing user; actor=app acts as the application — suited to agents and service accounts",
+    "Access tokens last 24 hours; refresh requests have a 30-minute replay grace period for network errors",
+    "Client-credentials tokens (actor=app) last 30 days, have no refresh token, and must be enabled on the app first",
+    "PKCE flows send a code_verifier instead of a client_secret"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "title": "Pick a dedicated workspace",
+      "description": "Linear recommends a dedicated workspace for managing the app because every admin there can see and edit it.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": null,
+      "warnings": []
+    },
+    {
+      "number": 2,
+      "title": "Create the OAuth application",
+      "description": "Open the API settings page to create a new OAuth2 application. Give it a name and add your redirect callback URLs (for Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback).",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": "https://linear.app/settings/api/applications/new",
+      "warnings": []
+    },
+    {
+      "number": 3,
+      "title": "Choose scopes and actor",
+      "description": "Request the narrowest scopes you need (read is included by default). Use actor=app if an agent should appear as the author of what it creates.",
+      "agent_can_do": false,
+      "estimated_time": "10 minutes",
+      "url": null,
+      "warnings": [
+        "Avoid the admin scope unless essential"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Send users to the authorize URL",
+      "description": "Redirect to https://linear.app/oauth/authorize with client_id, redirect_uri, response_type=code and scope (state recommended).",
+      "agent_can_do": true,
+      "estimated_time": "15 minutes",
+      "url": "https://linear.app/oauth/authorize",
+      "warnings": []
+    },
+    {
+      "number": 5,
+      "title": "Exchange the code and refresh tokens",
+      "description": "POST to https://api.linear.app/oauth/token with the code, redirect_uri, client_id and client_secret (or code_verifier for PKCE). Store the refresh token and exchange it before the 24-hour expiry.",
+      "agent_can_do": true,
+      "estimated_time": "30 minutes",
+      "url": "https://api.linear.app/oauth/token",
+      "warnings": []
+    }
+  ],
+  "requirements": {
+    "account_type": "Linear workspace (admin access to create the app)",
+    "needs_live_website": false,
+    "needs_privacy_policy": false,
+    "needs_terms_of_service": false,
+    "needs_video_demo": false,
+    "needs_security_audit": false,
+    "allowed_scopes": [
+      "read",
+      "write",
+      "issues:create",
+      "comments:create"
+    ],
+    "restricted_scopes": []
+  },
+  "blockers": [
+    {
+      "title": "Short-lived access tokens",
+      "description": "Authorization-code access tokens expire after 24 hours, so you must implement refresh.",
+      "severity": "warning",
+      "workaround": "Exchange the refresh token at the token endpoint; reuse the replay grace period for network errors."
+    },
+    {
+      "title": "Client-credentials flow is opt-in",
+      "description": "Server-to-server (actor=app) tokens must be enabled on the app before they work.",
+      "severity": "info"
+    }
+  ],
+  "agent_actions": [
+    {
+      "action": "Fetched and read https://linear.app/developers/oauth-2-0-authentication",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "7 claims confirmed, 0 corrected, 2 could not be verified.",
+      "status": "done"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Linear OAuth 2.0 authentication",
+      "url": "https://linear.app/developers/oauth-2-0-authentication",
+      "type": "official_docs"
+    },
+    {
+      "title": "Composio managed OAuth directory",
+      "url": "https://docs.composio.dev/toolkits/managed-auth",
+      "type": "official_docs"
+    }
+  ],
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "next_step": "Create a dedicated Linear workspace, open Settings → API → OAuth applications → New, and add your redirect URL. Use Composio managed auth to prototype meanwhile.",
+  "if_blocked": [
+    {
+      "situation": "Authorization fails with a redirect error",
+      "action": "Make the redirect_uri identical to one of the callback URLs on the app."
+    },
+    {
+      "situation": "Tokens stop working after a day",
+      "action": "Refresh them — authorization-code tokens last 24 hours.",
+      "url": "https://linear.app/developers/oauth-2-0-authentication"
+    }
+  ],
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://linear.app/developers/oauth-2-0-authentication",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "OAuth applications are created at linear.app/settings/api/applications/new with redirect callback URLs",
+      "Scopes: read (default), write, narrower scopes, admin",
+      "actor=user vs actor=app",
+      "Authorization-code tokens last 24 hours; refresh token flow with 30-minute grace period",
+      "Client-credentials tokens last 30 days and must be enabled",
+      "Authorize endpoint linear.app/oauth/authorize; token endpoint api.linear.app/oauth/token",
+      "Linear is listed as Composio-managed OAuth (the separate \"Linear MCP\" entry is bring-your-own)"
+    ],
+    "corrected": [],
+    "unverified": [
+      "Whether a website, privacy policy or review is needed to list the app publicly (the page describes none)",
+      "Rate limits and plan restrictions"
+    ]
+  },
+  "oauth_endpoints": {
+    "authorization_url": "https://linear.app/oauth/authorize",
+    "token_url": "https://api.linear.app/oauth/token"
+  }
+}
