@@ -206,3 +206,20 @@ apm-integration-composio/
 No OAuth credentials, API keys, or secrets are included in this repository.
 The only credential needed at runtime is a `GEMINI_API_KEY` set in `backend/.env` (excluded from git via `.gitignore`).
 
+
+---
+
+## Deployment
+
+**Backend → Render** (free tier; `render.yaml` included)
+1. Render → New → Blueprint → select this repo.
+2. Set `GEMINI_API_KEY` and `ALLOWED_ORIGINS` (your Vercel URL, no trailing slash).
+3. Note the service URL, e.g. `https://oauth-guides-api.onrender.com`.
+
+**Frontend → Vercel**
+1. Import the repo, set **Root Directory** to `frontend`.
+2. Add env var `NEXT_PUBLIC_API_URL` = the Render URL (no trailing slash).
+3. Deploy, then put the Vercel URL into the backend's `ALLOWED_ORIGINS`.
+
+Notes: the free Render tier sleeps when idle (first request ~30s) and its disk is ephemeral, so
+live-generated guides saved to `guides/generated/` disappear on redeploy/restart.
