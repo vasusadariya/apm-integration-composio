@@ -2,6 +2,7 @@
 Unit and integration tests for the OAuth Guide Backend API.
 Tests all endpoints, schema validation, and search functionality.
 """
+import json
 import unittest
 from fastapi.testclient import TestClient
 from main import app, list_all_guides, load_guide, LIBRARY_DIR
@@ -204,6 +205,38 @@ class TestSetupKitAndProbe(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(_classify_authorize(302, "https://x.com/signin?next", "")[0], "login_first")
         self.assertEqual(_classify_authorize(400, "", "invalid_client")[0], "rejects_client")
         self.assertEqual(_classify_authorize(403, "", "")[0], "blocked")
+
+
+class TestModelFallback(unittest.IsolatedAsyncioTestCase):
+    async def test_retired_model_is_skipped_and_remembered(self):
+        from agent import jobs, researcher
+        researcher._BAD_MODELS.clear()
+        researcher._MODEL_CACHE.update(at=0.0, models=[])
+        tried = []
+        guide_json = json.dumps(load_guide("github"))
+
+        async def fake_attempt(client, model, prompt, use_search, emit, deadline):
+            tried.append((model, use_search))
+            if model == "gemini-3.8-flash":
+                raise Exception("404 NOT_FOUND. This model is no longer available")
+            return guide_json, []
+
+        async def fake_probe(g):
+            return g
+
+        orig = (researcher._run_attempt, researcher.probe_guide, researcher.discover_models)
+        researcher._run_attempt, researcher.probe_guide = fake_attempt, fake_probe
+        researcher.discover_models = lambda client: []
+        try:
+            job, _ = jobs.start_job("Zz Retired Model App", None, "key")
+            _ = [e async for e in jobs.stream_events(job)]
+        finally:
+            researcher._run_attempt, researcher.probe_guide, researcher.discover_models = orig
+        self.assertEqual(job.status, "done")
+        self.assertEqual(tried[0], ("gemini-3.8-flash", True))
+        self.assertNotIn(("gemini-3.8-flash", False), tried)  # no wasted ungrounded retry on a retired model
+        self.assertIn("gemini-3.8-flash", researcher._BAD_MODELS)
+        researcher._BAD_MODELS.clear()
 
 if __name__ == "__main__":
     unittest.main()

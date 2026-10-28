@@ -115,7 +115,41 @@ Provide 2-3 if_blocked entries. Only state review timelines or prices if a sourc
 LIBRARY_DIR = Path(__file__).parent.parent / "guides" / "library"
 GENERATED_DIR = Path(__file__).parent.parent / "guides" / "generated"
 
-DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
+# Static fallbacks, newest first. The real list is discovered from the API at runtime,
+# because Google retires models for new keys without notice (404 NOT_FOUND).
+DEFAULT_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest", "gemini-2.5-flash"]
+MAX_MODELS_TRIED = 4
+_EXCLUDED = ("lite", "image", "tts", "live", "audio", "embedding", "exp", "robotics", "computer", "thinking", "vision")
+_BAD_MODELS: set[str] = set()
+_MODEL_CACHE: dict = {"at": 0.0, "models": []}
+
+
+def _is_model_gone(err: Exception | str) -> bool:
+    msg = str(err)
+    return "404" in msg or "NOT_FOUND" in msg or "no longer available" in msg
+
+
+def discover_models(client) -> list[str]:
+    """List the Flash models this API key can actually call, newest first (cached for an hour)."""
+    if _MODEL_CACHE["models"] and time.time() - _MODEL_CACHE["at"] < 3600:
+        return _MODEL_CACHE["models"]
+    found: list[str] = []
+    try:
+        for m in client.models.list():
+            name = (m.name or "").replace("models/", "")
+            actions = getattr(m, "supported_actions", None) or []
+            if "flash" in name and not any(x in name for x in _EXCLUDED) and (not actions or "generateContent" in actions):
+                found.append(name)
+    except Exception:  # noqa: BLE001 - discovery is best effort
+        return []
+
+    def version(n: str) -> tuple:
+        nums = re.findall(r"\d+(?:\.\d+)?", n)
+        return (float(nums[0]) if nums else 0.0, "preview" not in n)
+
+    found = sorted(set(found), key=version, reverse=True)
+    _MODEL_CACHE.update(at=time.time(), models=found)
+    return found
 
 
 def slugify(name: str) -> str:
@@ -335,43 +369,58 @@ async def research(app_name: str, website_url: str | None, api_key: str, emit: E
         app_name=app_name, website_hint=f"Website: {website_url}" if website_url else ""
     )
     configured = os.getenv("GEMINI_MODEL", "").strip()
-    models = list(dict.fromkeys([m for m in [configured, *DEFAULT_MODELS] if m]))
-    # Grounded first, then ungrounded on the same and the next model.
-    plan = [(models[0], True), (models[0], False)] + [(m, False) for m in models[1:3]]
+    try:
+        discovered = await asyncio.wait_for(asyncio.to_thread(discover_models, client), timeout=10)
+    except Exception:  # noqa: BLE001
+        discovered = []
+    candidates = [m for m in dict.fromkeys([configured, *discovered[:3], *DEFAULT_MODELS]) if m and m not in _BAD_MODELS]
+    if discovered:
+        await emit({"type": "status", "message": f"Models available to this key: {', '.join(discovered[:3])}"})
 
     overall_deadline = time.monotonic() + TOTAL_BUDGET_SECONDS
     last_error = "Research could not be completed."
-    for n, (model, use_search) in enumerate(plan, 1):
-        if overall_deadline - time.monotonic() < 20:
+    attempt = 0
+    for model in candidates[:MAX_MODELS_TRIED]:
+        # Grounded first; if search fails, retry the same model without it. A retired model
+        # (404) is skipped immediately and remembered so later runs don't waste time on it.
+        for use_search in (True, False):
+            if overall_deadline - time.monotonic() < 20:
+                break
+            attempt += 1
+            mode = "with Google Search" if use_search else "without web search (faster fallback)"
+            await emit({"type": "status", "message": f"Attempt {attempt}: researching {mode} using {model}…"})
+            try:
+                raw_text, sources = await _run_attempt(client, model, prompt, use_search, emit, overall_deadline)
+                if sources:
+                    await emit({"type": "status", "message": f"Consulted {len(sources)} web sources via Google Search"})
+                await emit({"type": "status", "message": "Validating the guide structure…"})
+                guide = normalize_guide(extract_json(raw_text), app_name, sources)
+                if fresh and find_matching_library_guide(app_name):
+                    guide["slug"] = f"{guide['slug']}-live"  # never collide with the library guide's URL
+                await emit({"type": "status", "message": "Testing the guide: checking cited links and OAuth endpoints…"})
+                guide = await probe_guide(guide)
+                save_generated_guide(guide)
+                if not fresh and slugify(app_name) != guide["slug"]:
+                    (GENERATED_DIR / f"{slugify(app_name)}.json").write_text(json.dumps(guide, indent=2))
+                await emit({"type": "guide", "data": guide})
+                await emit({"type": "done", "message": "Guide ready"})
+                return
+            except Exception as e:  # noqa: BLE001 - every failure moves on to the next attempt
+                msg = str(e)
+                if _is_model_gone(e):
+                    _BAD_MODELS.add(model)
+                    last_error = f"Model {model} is not available to this API key."
+                    await emit({"type": "status", "message": f"{model} is not available to this key — trying another model."})
+                    break  # skip this model's ungrounded retry
+                last_error = friendly_error(e) if not isinstance(e, TimeoutError) else "The research service took too long to respond."
+                if isinstance(e, (ValueError, json.JSONDecodeError)):
+                    last_error = "The model returned a guide in an unexpected format."
+                await emit({"type": "status", "message": f"Attempt {attempt} failed: {last_error}"})
+                if "API_KEY_INVALID" in msg or "API key not valid" in msg:
+                    candidates = []  # no point retrying with any model
+                    break
+        if not candidates:
             break
-        mode = "with Google Search" if use_search else "without web search (faster fallback)"
-        await emit({"type": "status", "message": f"Attempt {n}/{len(plan)}: researching {mode} using {model}…"})
-        try:
-            raw_text, sources = await _run_attempt(client, model, prompt, use_search, emit, overall_deadline)
-            if sources:
-                await emit({"type": "status", "message": f"Consulted {len(sources)} web sources via Google Search"})
-            await emit({"type": "status", "message": "Validating the guide structure…"})
-            guide = normalize_guide(extract_json(raw_text), app_name, sources)
-            if fresh and find_matching_library_guide(app_name):
-                guide["slug"] = f"{guide['slug']}-live"  # never collide with the library guide's URL
-            await emit({"type": "status", "message": "Testing the guide: checking cited links and OAuth discovery endpoints…"})
-            guide = await probe_guide(guide)
-            save_generated_guide(guide)
-            if not fresh and slugify(app_name) != guide["slug"]:
-                (GENERATED_DIR / f"{slugify(app_name)}.json").write_text(json.dumps(guide, indent=2))
-            await emit({"type": "guide", "data": guide})
-            await emit({"type": "done", "message": "Guide ready"})
-            return
-        except Exception as e:  # noqa: BLE001 - every failure moves on to the next attempt
-            last_error = friendly_error(e) if not isinstance(e, TimeoutError) else (
-                "The research service took too long to respond."
-            )
-            if isinstance(e, (ValueError, json.JSONDecodeError)):
-                last_error = "The model returned a guide in an unexpected format."
-            await emit({"type": "status", "message": f"Attempt {n} failed: {last_error}"})
-            msg = str(e)
-            if "API_KEY_INVALID" in msg or "API key not valid" in msg:
-                break  # no point retrying
 
     retry_hint = "" if "Invalid Gemini API key" in last_error else " Please try again in a minute."
     await emit({"type": "error", "message": f"{last_error}{retry_hint}"})

@@ -309,7 +309,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 | `ALLOWED_ORIGINS` | In production | `*` | Comma-separated list of frontend origins allowed by CORS. |
 | `RATE_LIMIT_PER_HOUR` | No | `12` | New generation runs allowed per client IP per hour (rejoining an existing job is free). |
 
-**Model cascade:** `GEMINI_MODEL` (if set) → `gemini-2.5-flash` → `gemini-2.0-flash` → `gemini-flash-latest`. For each model the agent first tries **with** Google Search grounding, and only if that fails (quota, unsupported model) retries **without** it.
+**Model selection:** `GEMINI_MODEL` (if set) → the newest Flash models **discovered from the API for your key** (cached for an hour) → static fallbacks (`gemini-3.8-flash`, `gemini-3.5-flash`, `gemini-flash-latest`, `gemini-2.5-flash`). At most 4 models are tried. For each model the agent first tries **with** Google Search grounding and, if that fails, retries **without** it. A model that answers `404 NOT_FOUND` / "no longer available" is skipped immediately and remembered, because Google retires models for new keys without notice.
 
 The key is re-read from `.env` on every request, so you can fix it without restarting the server.
 
