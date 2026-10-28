@@ -16,7 +16,9 @@
     "Free HubSpot Developer account is available",
     "HubSpot apps use scopes tied to CRM objects (contacts, deals, companies)",
     "Test installs can use a HubSpot developer test account (sandbox)",
-    "Composio managed auth available for prototyping"
+    "Composio managed auth available for prototyping",
+    "HubSpot has legacy public apps and a newer developer platform with a separate OAuth quickstart — check which type you are building",
+    "The installing user must be a Super Admin and must have access to every requested scope, or installation fails; optional_scope is dropped if the account lacks those products"
   ],
   "steps": [
     {
@@ -71,8 +73,16 @@
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["crm.objects.contacts.read", "crm.objects.deals.read", "crm.objects.companies.read", "crm.objects.contacts.write"],
-    "restricted_scopes": ["e-commerce", "accounting"]
+    "allowed_scopes": [
+      "crm.objects.contacts.read",
+      "crm.objects.deals.read",
+      "crm.objects.companies.read",
+      "crm.objects.contacts.write"
+    ],
+    "restricted_scopes": [
+      "e-commerce",
+      "accounting"
+    ]
   },
   "blockers": [
     {
@@ -84,8 +94,18 @@
   ],
   "agent_actions": [
     {
-      "action": "Research HubSpot Developer App creation process",
-      "result": "Documented straightforward self-service OAuth app creation with good developer documentation",
+      "action": "Fetched and read https://developers.hubspot.com/docs/api/oauth-quickstart-guide",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "4 claims confirmed, 1 corrected, 2 could not be verified.",
       "status": "done"
     }
   ],
@@ -96,7 +116,34 @@
       "type": "official_docs"
     }
   ],
-  "confidence": "verified",
-  "last_verified": "2025-01-15"
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://developers.hubspot.com/docs/api/oauth-quickstart-guide",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "A developer account and an app are required; production redirect_uri must use https",
+      "Installing user must be a Super Admin with access to all requested scopes",
+      "optional_scope is dropped if the portal lacks access to those products",
+      "HubSpot is listed as Composio-managed OAuth"
+    ],
+    "corrected": [
+      "Added: the quickstart applies to legacy public apps; newer developer-platform apps use a separate guide"
+    ],
+    "unverified": [
+      "Whether HubSpot reviews a public app before customer installs, and the 2–5 day timeline (page does not cover it)",
+      "Step-by-step app creation in the portal (page does not cover it)"
+    ]
+  },
+  "next_step": "Create a HubSpot developer account, build the app, and install it in a test account to validate the OAuth flow before you ask customers to install.",
+  "if_blocked": [
+    {
+      "situation": "Install fails for a customer",
+      "action": "Ask a Super Admin with access to all requested scopes to install, or move non-essential scopes to optional_scope."
+    }
+  ]
 }
-

@@ -6,6 +6,7 @@ import { shortName, type OAuthGuide, type Step, type Blocker } from '@/lib/types
 import GlitchBars from './GlitchBars';
 import Reveal from './Reveal';
 import AppLogo from './AppLogo';
+import { download, encodeGuide, guideToMarkdown } from '@/lib/share';
 import DifficultyBadge, { DifficultyMeter } from './DifficultyBadge';
 
 export { DifficultyBadge };
@@ -21,6 +22,8 @@ const SECTIONS = [
   { id: 'steps', label: 'Steps' },
   { id: 'requirements', label: 'Requirements' },
   { id: 'blockers', label: 'Blockers' },
+  { id: 'stuck', label: 'If you’re stuck' },
+  { id: 'verification', label: 'Verification' },
   { id: 'agent', label: 'Agent log' },
   { id: 'sources', label: 'Sources' },
 ];
@@ -169,7 +172,13 @@ export default function GuideDetail({
 
   const handleShare = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl || window.location.href);
+      // Generated guides live on an ephemeral server disk, so their link also embeds the guide.
+      let url = (shareUrl || window.location.href).split('#')[0];
+      if (guide.verification?.status === 'automated_checks') {
+        const enc = await encodeGuide(guide);
+        if (enc) url += `#g=${enc}`;
+      }
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {}
@@ -183,6 +192,8 @@ export default function GuideDetail({
   const req = guide.requirements;
   const sectionVisible = (id: string) =>
     id === 'blockers' ? guide.blockers?.length > 0
+    : id === 'stuck' ? (guide.if_blocked?.length ?? 0) > 0
+    : id === 'verification' ? !!guide.verification
     : id === 'agent' ? guide.agent_actions?.length > 0
     : id === 'sources' ? guide.sources?.length > 0
     : true;
@@ -214,11 +225,32 @@ export default function GuideDetail({
                 <DifficultyBadge difficulty={guide.difficulty} dark />
                 <DifficultyMeter difficulty={guide.difficulty} dark />
                 <span className={`border px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.08em] ${conf.cls}`}>{conf.label}</span>
+                {guide.verification && (
+                  <a href="#verification" className="border border-white/20 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-white/70 transition-colors hover:border-white hover:text-white">
+                    {guide.verification.status === 'checked' ? '🔎 Checked against docs' : guide.verification.status === 'automated_checks' ? '🤖 Machine-checked links' : '⚠ Not re-checked'}
+                  </a>
+                )}
               </div>
             </div>
-            <button onClick={handleShare} className="btn-light btn-sm">
-              {copied ? '✓ Link copied' : <>Share <span className="arr">↗</span></>}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={handleShare} className="btn-light btn-sm">
+                {copied ? '✓ Link copied' : <>Share <span className="arr">↗</span></>}
+              </button>
+              <button
+                onClick={() => download(`${guide.slug}-oauth-guide.md`, guideToMarkdown(guide), 'text/markdown')}
+                className="btn-ghost btn-sm"
+                title="Download as Markdown"
+              >
+                .md
+              </button>
+              <button
+                onClick={() => download(`${guide.slug}-oauth-guide.json`, JSON.stringify(guide, null, 2), 'application/json')}
+                className="btn-ghost btn-sm"
+                title="Download as JSON"
+              >
+                .json
+              </button>
+            </div>
           </div>
 
           <p className="animate-fade-up mt-8 max-w-3xl text-lg leading-relaxed text-white/70" style={{ animationDelay: '100ms' }}>
@@ -238,6 +270,16 @@ export default function GuideDetail({
               </div>
             ))}
           </div>
+
+          {guide.next_step && (
+            <div className="animate-fade-up mt-6 flex items-start gap-4 border border-white bg-white p-5 text-ink" style={{ animationDelay: '210ms' }}>
+              <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center bg-brand font-mono text-sm text-white">→</span>
+              <div>
+                <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-zinc-500">Your next step</p>
+                <p className="mt-1 font-medium leading-relaxed">{guide.next_step}</p>
+              </div>
+            </div>
+          )}
 
           {guide.composio_managed_auth && (
             <div className="animate-fade-up mt-6 flex items-start gap-4 border border-brand-300/30 bg-brand/15 p-5" style={{ animationDelay: '240ms' }}>
@@ -303,6 +345,10 @@ export default function GuideDetail({
             <span>👤 You handle {steps.length - agentSteps}</span>
             <span className="text-zinc-400">Click a number to mark a step done</span>
           </div>
+          <p className="mb-8 max-w-2xl border-l-2 border-zinc-200 pl-4 text-xs leading-relaxed text-zinc-500">
+            <strong className="text-zinc-700">How to read the badges:</strong> “Agent can do this” means an AI agent could realistically perform the step (for example, calling an API or filling configuration for you);
+            “You do this” means it needs a human — usually signing in to a provider console, accepting legal terms, or making a business decision. This is our assessment, not a tested capability.
+          </p>
           <div>
             {steps.map((step, i) => (
               <Reveal key={step.number} delay={Math.min(i, 4) * 50}>
@@ -408,6 +454,80 @@ export default function GuideDetail({
                 </Reveal>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* If you're stuck */}
+        {(guide.if_blocked?.length ?? 0) > 0 && (
+          <section className="mb-20">
+            <SectionTitle id="stuck" eyebrow="Not moving?" title="If you get stuck" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              {guide.if_blocked!.map((b, i) => (
+                <Reveal key={i} delay={Math.min(i, 3) * 70}>
+                  <div className="h-full border border-zinc-200 bg-white p-5 transition-colors hover:border-ink">
+                    <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-zinc-400">If</p>
+                    <p className="mt-1 font-semibold">{b.situation}</p>
+                    <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-brand">Do this</p>
+                    <p className="mt-1 text-sm leading-relaxed text-zinc-600">{b.action}</p>
+                    {b.url && (
+                      <a href={b.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-brand hover:underline">Open ↗</a>
+                    )}
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Verification */}
+        {guide.verification && (
+          <section className="mb-20">
+            <SectionTitle id="verification" eyebrow="Evidence" title="What was verified" />
+            <Reveal>
+              <div className="border border-zinc-200 bg-white">
+                <div className="flex flex-wrap items-center gap-3 border-b border-zinc-200 p-5">
+                  <span className="border border-zinc-300 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.08em]">
+                    {guide.verification.status === 'checked' ? 'Checked against official docs' : guide.verification.status === 'automated_checks' ? 'Machine-checked only' : 'Not re-checked'}
+                  </span>
+                  {guide.verification.checked_on && (
+                    <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-zinc-400">{guide.verification.checked_on}</span>
+                  )}
+                </div>
+                <div className="grid gap-px bg-zinc-200 md:grid-cols-3">
+                  {[
+                    { title: 'Confirmed', icon: '✅', items: guide.verification.confirmed, tone: 'text-emerald-700' },
+                    { title: 'Corrected', icon: '🛠', items: guide.verification.corrected, tone: 'text-brand' },
+                    { title: 'Could not verify', icon: '❓', items: guide.verification.unverified, tone: 'text-amber-700' },
+                  ].map((col) => (
+                    <div key={col.title} className="bg-white p-5">
+                      <p className={`font-mono text-[11px] uppercase tracking-[0.1em] ${col.tone}`}>{col.title} · {col.items.length}</p>
+                      {col.items.length === 0 ? (
+                        <p className="mt-3 text-sm text-zinc-400">Nothing here.</p>
+                      ) : (
+                        <ul className="mt-3 space-y-3">
+                          {col.items.map((t, i) => (
+                            <li key={i} className="flex gap-2 text-sm leading-relaxed text-zinc-700">
+                              <span className="flex-none">{col.icon}</span>
+                              <span>{t}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {guide.verification.checked_against.length > 0 && (
+                  <div className="border-t border-zinc-200 p-5">
+                    <p className="eyebrow mb-2">Checked against</p>
+                    <ul className="space-y-1">
+                      {guide.verification.checked_against.map((u) => (
+                        <li key={u}><a href={u} target="_blank" rel="noopener noreferrer" className="break-all text-sm text-brand hover:underline">{u}</a></li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </Reveal>
           </section>
         )}
 

@@ -43,6 +43,22 @@ class AgentAction(BaseModel):
     status: Literal["done", "partial", "blocked"]
 
 
+class IfBlocked(BaseModel):
+    situation: str
+    action: str
+    url: Optional[str] = None
+
+
+class Verification(BaseModel):
+    """What was actually checked against live sources, and what was not."""
+    status: Literal["checked", "automated_checks", "not_checked"]
+    checked_on: Optional[str] = None
+    checked_against: list[str] = []
+    confirmed: list[str] = []
+    corrected: list[str] = []
+    unverified: list[str] = []
+
+
 class OAuthGuide(BaseModel):
     app: str
     slug: str
@@ -63,4 +79,7 @@ class OAuthGuide(BaseModel):
     sources: list[Source]
     confidence: Literal["verified", "source_supported", "inferred", "uncertain"]
     last_verified: str
+    next_step: Optional[str] = None
+    if_blocked: list[IfBlocked] = []
+    verification: Optional[Verification] = None
 

@@ -6,17 +6,18 @@
   "generated_at": "2025-01-15T00:00:00Z",
   "difficulty": "hard",
   "setup_time_estimate": "2–4 hours",
-  "approval_time_estimate": "3–10 business days (for publishable app)",
+  "approval_time_estimate": "Marketplace review for published apps (timeline not confirmed)",
   "requires_approval": true,
   "composio_managed_auth": true,
-  "summary": "Zoom OAuth apps have two modes: unpublished (development/private) works immediately, while published apps (for any Zoom user) require Zoom's review. The setup involves the Zoom Marketplace developer portal and requires configuring scopes and redirect URIs. Zoom's review process focuses on app functionality, security practices, and use-case legitimacy. Privacy policy and terms of service are required for published apps.",
+  "summary": "Zoom apps are created in the Zoom App Marketplace developer portal. For OAuth on behalf of users you build a General app (authorization code, device or PKCE flow); for backend access to your own account you use a Server-to-Server OAuth app. You can install and test an app in your own account immediately; Zoom's docs mention an application review team for production apps, but the general publishing process and timeline were not confirmed.",
   "key_facts": [
     "Unpublished app works immediately for your Zoom account (development use only)",
-    "Published app (any Zoom user can install) requires Zoom's review: 3–10 business days",
+    "Zoom's application review team reviews production apps (the docs we checked state no timeline; 3–10 business days is community-reported and unverified)",
     "Zoom has a Marketplace model — published apps appear in zoom.us/apps",
-    "Two app types: User-managed OAuth (installs per user) and Account-level OAuth (installs for entire org)",
+    "App types per Zoom's docs: General (acts for a user or account; authorization-code, device and PKCE flows) and Server-to-Server OAuth (your own account, 1-hour tokens)",
     "Composio managed auth available for prototyping",
-    "Server-to-Server OAuth available for backend-only (no user consent) integrations"
+    "Server-to-Server OAuth available for backend-only (no user consent) integrations",
+    "Authorization-code refresh tokens last 90 days; Server-to-Server tokens last one hour with no refresh (request a new one)"
   ],
   "steps": [
     {
@@ -31,7 +32,7 @@
     {
       "number": 2,
       "title": "Create an OAuth App",
-      "description": "Select 'OAuth' as the app type. Choose whether it's User-managed (per-user installs) or Account-level (org-wide). Enter app name and select 'Published on Zoom App Marketplace' or 'Account-only' (for internal use, no review needed).",
+      "description": "Choose 'General app' to act on behalf of users (authorization code / PKCE / device flow), or 'Server-to-Server OAuth' for backend-only access to your own account. The portal wording has changed over time, so follow the current labels. Enter the app name and choose how it will be used.",
       "agent_can_do": false,
       "estimated_time": "10 minutes",
       "url": "https://marketplace.zoom.us/develop/create",
@@ -86,8 +87,16 @@
     "needs_terms_of_service": true,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["meeting:read:admin", "meeting:write:admin", "user:read:admin", "recording:read:admin"],
-    "restricted_scopes": ["billing:read:admin", "account:read:admin"]
+    "allowed_scopes": [
+      "meeting:read:admin",
+      "meeting:write:admin",
+      "user:read:admin",
+      "recording:read:admin"
+    ],
+    "restricted_scopes": [
+      "billing:read:admin",
+      "account:read:admin"
+    ]
   },
   "blockers": [
     {
@@ -105,13 +114,18 @@
   ],
   "agent_actions": [
     {
-      "action": "Research Zoom Marketplace developer app types",
-      "result": "Identified Account-level (no review) vs published (review required) paths",
+      "action": "Fetched and read https://developers.zoom.us/docs/integrations/oauth/",
+      "result": "Compared the page against this guide's claims.",
       "status": "done"
     },
     {
-      "action": "Check Composio managed auth for Zoom",
-      "result": "Confirmed Zoom is in Composio's managed auth directory",
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "6 claims confirmed, 2 corrected, 2 could not be verified.",
       "status": "done"
     }
   ],
@@ -127,7 +141,42 @@
       "type": "official_docs"
     }
   ],
-  "confidence": "source_supported",
-  "last_verified": "2025-01-15"
+  "confidence": "uncertain",
+  "last_verified": "2026-10-28",
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://developers.zoom.us/docs/integrations/oauth/",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "App types are General (authorization code, device, chatbot, PKCE) and Server-to-Server (account_credentials grant, 1-hour tokens)",
+      "Authorization-code refresh tokens last 90 days",
+      "Apps can be installed in your own account via Local Test",
+      "Zoom has an application review team that tests some production integrations (public clients/PKCE)",
+      "Production apps must delete user data after a deauthorization webhook",
+      "Zoom is listed as Composio-managed OAuth"
+    ],
+    "corrected": [
+      "Corrected: app types are now General vs Server-to-Server, not \"User-managed / Account-level OAuth\"",
+      "Corrected: the review timeline is no longer asserted as fact (3–10 business days unverified)"
+    ],
+    "unverified": [
+      "The Marketplace publishing review process and its duration",
+      "Whether a privacy policy and terms of service URLs are mandatory (not on the page checked)"
+    ]
+  },
+  "next_step": "Decide whether you need users' accounts (General app) or just your own (Server-to-Server). Create the app and use Local Test to install it in your own account first.",
+  "if_blocked": [
+    {
+      "situation": "Marketplace review rejected or slow",
+      "action": "Reply to the review team with the requested details; make sure every app information field and policy URL is complete.",
+      "url": "https://marketplace.zoom.us"
+    },
+    {
+      "situation": "Only need access to your own account",
+      "action": "Use a Server-to-Server OAuth app — no user consent or publishing needed."
+    }
+  ]
 }
-

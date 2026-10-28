@@ -6,17 +6,19 @@
   "generated_at": "2025-01-15T00:00:00Z",
   "difficulty": "medium",
   "setup_time_estimate": "1–2 hours",
-  "approval_time_estimate": "1–7 days (only if listing in Slack App Directory)",
+  "approval_time_estimate": "1–7 days (App Directory listing only; Slack publishes no timeline)",
   "requires_approval": false,
   "composio_managed_auth": true,
-  "summary": "Slack OAuth apps are straightforward to create and deploy. Any Slack app can be installed into workspaces without approval — you only need App Directory review if you want public listing in Slack's marketplace. The main complexity is understanding Slack's permission model (Bot Token Scopes vs User Token Scopes) and correctly configuring event subscriptions and redirect URLs. Composio provides managed auth for Slack.",
+  "summary": "Slack OAuth apps are straightforward to create and deploy. An app can be installed in its own workspace immediately; installing it in other workspaces requires enabling distribution, and Slack's Marketplace/directory review applies only if you want a public listing. The main complexity is understanding Slack's permission model (Bot Token Scopes vs User Token Scopes) and correctly configuring event subscriptions and redirect URLs. Composio provides managed auth for Slack.",
   "key_facts": [
-    "No approval needed for workspace-level distribution — your app works immediately",
+    "Apps that are not distributed can only be installed in the workspace that owns them; installing elsewhere fails with invalid_team_for_non_distributed_app",
     "App Directory listing (optional marketplace) requires Slack's review: 1–7 days",
     "Two token types: Bot Tokens (app identity) and User Tokens (act as a user) — understand the difference",
-    "Redirect URLs must be HTTPS and exact matches",
+    "Redirect URLs must be HTTPS; the redirect_uri you send must match or be a subdirectory of a configured URL, and the same value must be used in both OAuth steps",
     "Socket Mode available for development (no public URL needed)",
-    "Composio managed auth available for prototyping without your own app"
+    "Composio managed auth available for prototyping without your own app",
+    "Authorization codes expire after 10 minutes; always verify the state parameter",
+    "Slack may return unapproved_scope when a scope is still in review or was never submitted for review"
   ],
   "steps": [
     {
@@ -86,8 +88,18 @@
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["channels:read", "chat:write", "users:read", "files:read", "reactions:read"],
-    "restricted_scopes": ["admin", "admin.conversations:write", "admin.users:write"]
+    "allowed_scopes": [
+      "channels:read",
+      "chat:write",
+      "users:read",
+      "files:read",
+      "reactions:read"
+    ],
+    "restricted_scopes": [
+      "admin",
+      "admin.conversations:write",
+      "admin.users:write"
+    ]
   },
   "blockers": [
     {
@@ -105,13 +117,18 @@
   ],
   "agent_actions": [
     {
-      "action": "Research Slack OAuth scopes and permission model",
-      "result": "Documented Bot vs User token distinction, key scopes, and Admin scope restrictions",
+      "action": "Fetched and read https://docs.slack.dev/authentication/installing-with-oauth",
+      "result": "Compared the page against this guide's claims.",
       "status": "done"
     },
     {
-      "action": "Find Slack App Directory submission requirements",
-      "result": "Confirmed privacy policy, support URL, and security review required for marketplace listing",
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "5 claims confirmed, 3 corrected, 2 could not be verified.",
       "status": "done"
     }
   ],
@@ -127,7 +144,46 @@
       "type": "official_docs"
     }
   ],
-  "confidence": "verified",
-  "last_verified": "2025-01-15"
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://docs.slack.dev/authentication/installing-with-oauth",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Bot tokens use the scope parameter; user tokens use user_scope; both can be requested in one flow",
+      "redirect_uri must be HTTPS and must match or be a subdirectory of a configured Redirect URL",
+      "Authorization codes expire after ten minutes",
+      "Non-distributed apps can only be installed in the owning workspace",
+      "Slack is listed as Composio-managed OAuth"
+    ],
+    "corrected": [
+      "Corrected: \"any app can be installed without approval\" — only in the owning workspace unless distribution is enabled",
+      "Corrected: redirect URLs need not be an exact match (a subdirectory is allowed)",
+      "Added: unapproved_scope errors imply scope review in some cases"
+    ],
+    "unverified": [
+      "The 1–7 day App Directory review timeline (no timeline on the pages checked)",
+      "Socket Mode and paid-plan requirement for admin scopes (not on the pages checked)"
+    ]
+  },
+  "next_step": "Create the app at api.slack.com/apps, add your redirect URL and bot scopes, and install it to your dev workspace. Enable distribution only when you need other workspaces.",
+  "if_blocked": [
+    {
+      "situation": "invalid_team_for_non_distributed_app when installing elsewhere",
+      "action": "Enable public distribution under Manage Distribution in your app settings.",
+      "url": "https://api.slack.com/apps"
+    },
+    {
+      "situation": "bad_redirect_uri",
+      "action": "Send the identical redirect_uri in both the authorize and token (oauth.v2.access) calls and make sure it is configured under OAuth & Permissions."
+    },
+    {
+      "situation": "unapproved_scope",
+      "action": "Remove the scope, or submit it for review as part of your distribution/listing."
+    }
+  ]
 }
-

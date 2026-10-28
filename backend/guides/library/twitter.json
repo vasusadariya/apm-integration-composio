@@ -4,29 +4,28 @@
   "website": "x.com",
   "logo_url": "https://abs.twimg.com/favicons/twitter.2.ico",
   "generated_at": "2025-01-15T00:00:00Z",
-  "difficulty": "hard",
-  "setup_time_estimate": "1–3 hours",
-  "approval_time_estimate": "1–5 business days (Elevated or higher access)",
-  "requires_approval": true,
-  "composio_managed_auth": true,
-  "summary": "Twitter/X Developer API access has become significantly more restrictive since 2023. Free tier access is extremely limited (1,500 tweets/month write). Basic access (paid, ~$100/month) is needed for most practical integrations. Elevated access requires manual review. The OAuth 2.0 setup itself is straightforward — the bottleneck is the access tier approval and the ongoing cost. Your app needs to explain exactly what it does in the developer portal.",
+  "difficulty": "medium",
+  "setup_time_estimate": "1–2 hours",
+  "approval_time_estimate": "No review step documented; paid usage credits required",
+  "requires_approval": false,
+  "composio_managed_auth": false,
+  "summary": "X's developer platform is now self-serve: sign in at console.x.com with your X account, accept the Developer Agreement, create an app and copy its credentials. API usage is billed pay-per-usage from credits you buy in advance, with no monthly fee. X is not in Composio's managed OAuth list, so you register your own app and supply the client ID and secret.",
   "key_facts": [
-    "Free Developer Account: 1,500 tweet writes/month, 10,000 reads/month — very limited",
-    "Basic plan ($100/month): 3M tweet reads/month — needed for most real applications",
-    "Pro plan ($5,000/month) and Enterprise tiers exist for high-volume use",
-    "OAuth 2.0 (PKCE) is available for user-context actions; OAuth 1.0a still used for some endpoints",
-    "App must be approved before getting production credentials — developer portal review",
-    "Composio managed auth available, but your users need to authorize your app with their own accounts",
-    "API v1.1 endpoints are being deprecated — use v2 API"
+    "Sign up at console.x.com with an X account and accept the Developer Agreement",
+    "API credentials are shown once when the app is created — regenerating them invalidates the old ones",
+    "Billing is pay-per-usage: buy credits up front, usage draws them down at per-endpoint rates; the same resource requested twice in 24 hours is charged once",
+    "Not covered by Composio managed OAuth — you must bring your own OAuth app (client ID + secret)",
+    "Older Free / Basic ($100) / Pro ($5,000) tier descriptions may be out of date — check the pricing page before relying on them",
+    "Team roles (Administrator / Developer) are limited to Enterprise accounts"
   ],
   "steps": [
     {
       "number": 1,
-      "title": "Apply for Developer Access",
-      "description": "Go to developer.twitter.com and sign in with your Twitter/X account. Apply for developer access by describing your use case. You must explain: what you're building, how you'll use the API, whether you'll display tweets outside Twitter, and whether you'll analyze data.",
+      "title": "Sign up on the X Developer Console",
+      "description": "Go to console.x.com, sign in with your X account and accept the Developer Agreement.",
       "agent_can_do": false,
       "estimated_time": "30–45 minutes",
-      "url": "https://developer.twitter.com/en/portal/petition/essential/basic-info",
+      "url": "https://console.x.com",
       "warnings": [
         "Be specific and honest — vague answers cause delays or rejection",
         "Mentioning automation should be tied to clear user-serving purposes"
@@ -34,22 +33,20 @@
     },
     {
       "number": 2,
-      "title": "Select Access Tier",
-      "description": "Choose your access tier: Free (very limited), Basic ($100/month), Pro ($5,000/month), or Enterprise. For most Composio integrations enabling user actions (reading timeline, posting tweets), Basic is the minimum practical tier.",
+      "title": "Add credits",
+      "description": "API usage is billed pay-per-usage. Buy credits up front; new accounts may be offered free credits (see the free-credits page linked from the docs).",
       "agent_can_do": false,
       "estimated_time": "10 minutes",
-      "url": "https://developer.twitter.com/en/portal/products",
-      "warnings": [
-        "Free tier is insufficient for most real applications — budget for at least Basic ($100/month)"
-      ]
+      "url": "https://console.x.com",
+      "warnings": []
     },
     {
       "number": 3,
-      "title": "Create a Project and App",
-      "description": "In the Developer Portal, create a Project (container) and then create an App inside it. Configure: App name, description, app website URL, callback URLs. For Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback",
+      "title": "Create an App",
+      "description": "Click 'New App', enter a name and description, then save the API Key, API Secret and tokens immediately — they are shown only once. In the app settings configure authentication, permissions and the callback URL (for Composio: https://backend.composio.dev/api/v3/toolkits/auth/callback).",
       "agent_can_do": false,
       "estimated_time": "15 minutes",
-      "url": "https://developer.twitter.com/en/portal/apps/new",
+      "url": "https://console.x.com",
       "warnings": []
     },
     {
@@ -78,53 +75,101 @@
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["tweet.read", "tweet.write", "users.read", "follows.read", "like.read", "offline.access"],
-    "restricted_scopes": ["dm.read", "dm.write", "block.read", "mute.read"]
+    "allowed_scopes": [
+      "tweet.read",
+      "tweet.write",
+      "users.read",
+      "follows.read",
+      "like.read",
+      "offline.access"
+    ],
+    "restricted_scopes": [
+      "dm.read",
+      "dm.write",
+      "block.read",
+      "mute.read"
+    ]
   },
   "blockers": [
     {
-      "title": "Paid Tier Required for Practical Use",
-      "description": "The Free tier limits of 1,500 tweets/month write and 10,000 reads/month make it insufficient for any real user-facing application. Basic plan costs $100/month.",
-      "severity": "blocking",
-      "workaround": "Budget for at least the Basic tier ($100/month). Evaluate if Twitter/X integration is worth the ongoing cost vs. user value."
+      "title": "Paid credits required",
+      "description": "API usage draws down prepaid credits. Without credits, requests fail.",
+      "severity": "warning",
+      "workaround": "Add credits in the console and monitor usage; check the free-credits page for new accounts."
     },
     {
-      "title": "Developer Portal Approval",
-      "description": "Applications must describe their use case in the Developer Portal. Automated, spam, or unclear use cases are rejected.",
-      "severity": "blocking",
-      "workaround": "Prepare a clear, detailed use-case description focusing on genuine user value, not automation."
+      "title": "Pricing and process change often",
+      "description": "Earlier tiers (Free / Basic / Pro) and a manual approval step are widely reported but are not described in the current developer-console docs.",
+      "severity": "info",
+      "workaround": "Check the current pricing page and your console before budgeting."
     }
   ],
   "agent_actions": [
     {
-      "action": "Research current Twitter/X API access tiers and pricing",
-      "result": "Documented current tier structure: Free/Basic($100)/Pro($5K) with associated limits",
+      "action": "Fetched and read https://docs.x.com/resources/fundamentals/developer-portal",
+      "result": "Compared the page against this guide's claims.",
       "status": "done"
     },
     {
-      "action": "Verify OAuth 2.0 PKCE support on Twitter/X v2 API",
-      "result": "Confirmed OAuth 2.0 with PKCE available for v2 API endpoints",
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "4 claims confirmed, 4 corrected, 3 could not be verified.",
       "status": "done"
     }
   ],
   "sources": [
     {
-      "title": "Twitter/X Developer Portal",
-      "url": "https://developer.twitter.com/en/portal/dashboard",
+      "title": "X Developer Console documentation",
+      "url": "https://docs.x.com/resources/fundamentals/developer-portal",
       "type": "official_docs"
     },
     {
-      "title": "Twitter OAuth 2.0 Documentation",
-      "url": "https://developer.twitter.com/en/docs/authentication/oauth-2-0",
-      "type": "official_docs"
-    },
-    {
-      "title": "Twitter API v2 Access Tiers",
-      "url": "https://developer.twitter.com/en/products/twitter-api",
+      "title": "Composio managed OAuth directory",
+      "url": "https://docs.composio.dev/toolkits/managed-auth",
       "type": "official_docs"
     }
   ],
   "confidence": "source_supported",
-  "last_verified": "2025-01-15"
+  "last_verified": "2026-10-28",
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://docs.x.com/resources/fundamentals/developer-portal",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Sign up at console.x.com and accept the Developer Agreement",
+      "Create an app with \"New App\"; credentials are shown only once and regenerating invalidates the old ones",
+      "Pay-per-usage billing from prepaid credits, no monthly fee",
+      "Twitter / X is NOT in the Composio managed OAuth list (bring your own OAuth app)"
+    ],
+    "corrected": [
+      "Corrected: the guide said Composio managed auth was available — it is not",
+      "Corrected: portal moved from developer.twitter.com to console.x.com",
+      "Corrected: fixed Free/Basic($100)/Pro($5,000) tiers replaced by documented pay-per-usage credits",
+      "Corrected: removed the claimed manual \"developer portal approval\" step — none is documented; difficulty lowered from hard to medium"
+    ],
+    "unverified": [
+      "Whether any manual approval still applies to some accounts or use cases",
+      "Free-credit amounts and per-endpoint prices",
+      "OAuth 2.0 (PKCE) configuration details — the page does not explain them"
+    ]
+  },
+  "next_step": "Sign in at console.x.com, accept the Developer Agreement, add some credits and create your app — then register your own OAuth client in Composio (no managed app exists).",
+  "if_blocked": [
+    {
+      "situation": "Requests fail with payment/credit errors",
+      "action": "Add credits in the console, then retry.",
+      "url": "https://console.x.com"
+    },
+    {
+      "situation": "Lost the API key or secret",
+      "action": "Regenerate it in the app settings — this invalidates the old credentials, so update everywhere they are used."
+    }
+  ]
 }
-

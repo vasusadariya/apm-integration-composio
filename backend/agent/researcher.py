@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Awaitable, Callable
 
+from agent.probe import probe_guide
 import google.genai as genai
 from google.genai import types
 
@@ -92,11 +93,19 @@ Investigate and produce a complete JSON guide with this EXACT structure:
       "type": "<official_docs|community|inferred>"
     }}
   ],
-  "confidence": "<verified|source_supported|inferred|uncertain>",
-  "last_verified": "<YYYY-MM-DD>"
+  "confidence": "<source_supported|inferred|uncertain>",
+  "last_verified": "<YYYY-MM-DD>",
+  "next_step": "<one sentence: the very first thing the developer should do right now>",
+  "if_blocked": [
+    {{
+      "situation": "<a likely problem, e.g. review rejected or stuck>",
+      "action": "<concrete next action: who to contact, what to change, or which alternative to use>",
+      "url": "<support or docs URL if known, else omit>"
+    }}
+  ]
 }}
 
-Return ONLY the JSON object, no markdown fences, no extra text.
+Provide 2-3 if_blocked entries. Only state review timelines or prices if a source states them; otherwise say they are not published. Return ONLY the JSON object, no markdown fences, no extra text.
 """
 
 LIBRARY_DIR = Path(__file__).parent.parent / "guides" / "library"
@@ -134,6 +143,10 @@ def normalize_guide(data: dict, app_name: str, grounded_sources: list[dict]) -> 
         if src["url"] not in seen:
             data.setdefault("sources", []).append(src)
             seen.add(src["url"])
+    data.pop("verification", None)  # only machine checks (agent/probe.py) may populate this
+    data["if_blocked"] = [b for b in data.get("if_blocked", []) if isinstance(b, dict) and b.get("situation") and b.get("action")]
+    for b in data["if_blocked"]:
+        b["url"] = b.get("url") or None
     # Never claim "verified" for an AI-generated guide.
     if data.get("confidence") == "verified":
         data["confidence"] = "source_supported"
@@ -275,13 +288,13 @@ async def _run_attempt(client, model, prompt, use_search, emit: Emit, deadline: 
         cancel.set()
 
 
-async def research(app_name: str, website_url: str | None, api_key: str, emit: Emit) -> None:
+async def research(app_name: str, website_url: str | None, api_key: str, emit: Emit, fresh: bool = False) -> None:
     """Research an app and emit status / guide / done / error events through `emit`."""
     await emit({"type": "status", "message": f"Starting research on {app_name}…"})
 
     # 1. Already generated recently? Serve it instantly.
     cached = GENERATED_DIR / f"{slugify(app_name)}.json"
-    if cached.exists():
+    if cached.exists() and not fresh:
         try:
             guide = json.loads(cached.read_text())
             await emit({"type": "status", "message": "Found a previously generated guide for this app."})
@@ -292,7 +305,7 @@ async def research(app_name: str, website_url: str | None, api_key: str, emit: E
             pass
 
     # 2. Pre-verified library guide?
-    library_match = find_matching_library_guide(app_name)
+    library_match = None if fresh else find_matching_library_guide(app_name)
     if library_match:
         await emit({"type": "status", "message": f"{library_match['app']} is in the verified guide library — loading it."})
         await asyncio.sleep(0.4)
@@ -323,8 +336,12 @@ async def research(app_name: str, website_url: str | None, api_key: str, emit: E
                 await emit({"type": "status", "message": f"Consulted {len(sources)} web sources via Google Search"})
             await emit({"type": "status", "message": "Validating the guide structure…"})
             guide = normalize_guide(extract_json(raw_text), app_name, sources)
+            if fresh and find_matching_library_guide(app_name):
+                guide["slug"] = f"{guide['slug']}-live"  # never collide with the library guide's URL
+            await emit({"type": "status", "message": "Testing the guide: checking cited links and OAuth discovery endpoints…"})
+            guide = await probe_guide(guide)
             save_generated_guide(guide)
-            if slugify(app_name) != guide["slug"]:
+            if not fresh and slugify(app_name) != guide["slug"]:
                 (GENERATED_DIR / f"{slugify(app_name)}.json").write_text(json.dumps(guide, indent=2))
             await emit({"type": "guide", "data": guide})
             await emit({"type": "done", "message": "Guide ready"})

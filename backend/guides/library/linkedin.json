@@ -6,18 +6,20 @@
   "generated_at": "2025-01-15T00:00:00Z",
   "difficulty": "hard",
   "setup_time_estimate": "2–4 hours",
-  "approval_time_estimate": "1–4 weeks (API product access approval required)",
+  "approval_time_estimate": "1–4 weeks (product approval; LinkedIn publishes no timeline)",
   "requires_approval": true,
-  "composio_managed_auth": false,
+  "composio_managed_auth": true,
   "summary": "LinkedIn OAuth has a unique tiered API product access model. Basic OAuth for sign-in works easily, but any meaningful data access (posting, reading connections, company data) requires applying for specific 'Products' within LinkedIn's Developer Portal — each with its own approval process taking 1–4 weeks. LinkedIn is one of the most restrictive platforms: many API capabilities are available only to Marketing Partners or require specific use-case justification.",
   "key_facts": [
     "Basic OAuth (sign in with LinkedIn, read basic profile) is self-service",
     "Any advanced access (posting, reading connections, company pages) requires Product approval",
     "LinkedIn's approval is use-case based — they want to know specifically what you're building",
     "Marketing API and company data requires LinkedIn Marketing Partner status (very restrictive)",
-    "Composio does NOT have managed auth for LinkedIn — you must create your own app",
+    "LinkedIn is listed as Composio-managed OAuth — good for prototyping; you still need your own app for production",
     "Rate limits on LinkedIn APIs are very strict even with approval",
-    "API terms prohibit scraping, bulk messaging, and automated connection requests"
+    "API terms prohibit scraping, bulk messaging, and automated connection requests",
+    "Authorization codes live 30 minutes; access tokens last 60 days; programmatic refresh tokens are only available to a limited set of partners",
+    "Redirect URLs must be absolute HTTPS URLs; query parameters are ignored and # fragments are not allowed"
   ],
   "steps": [
     {
@@ -82,8 +84,19 @@
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["openid", "profile", "email", "w_member_social"],
-    "restricted_scopes": ["r_fullprofile", "r_network", "r_emailaddress", "rw_company_admin", "w_organization_social"]
+    "allowed_scopes": [
+      "openid",
+      "profile",
+      "email",
+      "w_member_social"
+    ],
+    "restricted_scopes": [
+      "r_fullprofile",
+      "r_network",
+      "r_emailaddress",
+      "rw_company_admin",
+      "w_organization_social"
+    ]
   },
   "blockers": [
     {
@@ -97,23 +110,22 @@
       "description": "LinkedIn manually reviews all API product access requests. Requests that don't clearly fit LinkedIn's allowed use cases are denied. Common denials: automated messaging, data harvesting, competitive intelligence.",
       "severity": "blocking",
       "workaround": "Review LinkedIn's API Terms of Service and permitted use cases before applying. Frame your use case precisely around the specific product capabilities you need."
-    },
-    {
-      "title": "No Composio Managed Auth",
-      "description": "Unlike GitHub, Google, and Slack, LinkedIn is not available in Composio's managed auth directory. You must create your own LinkedIn app and get it approved.",
-      "severity": "warning",
-      "workaround": "Proceed with direct LinkedIn app creation — there's no shortcut here."
     }
   ],
   "agent_actions": [
     {
-      "action": "Research LinkedIn Developer API product tiers",
-      "result": "Found that LinkedIn uses a Product-based access model with separate approval per capability",
+      "action": "Fetched and read https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
+      "result": "Compared the page against this guide's claims.",
       "status": "done"
     },
     {
-      "action": "Check Composio managed auth for LinkedIn",
-      "result": "Confirmed LinkedIn is NOT in Composio's managed auth directory",
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "5 claims confirmed, 2 corrected, 3 could not be verified.",
       "status": "done"
     }
   ],
@@ -130,6 +142,41 @@
     }
   ],
   "confidence": "source_supported",
-  "last_verified": "2025-01-15"
+  "last_verified": "2026-10-28",
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Scopes available to your app depend on the Products you have access to; new Products are applied for under the Products tab",
+      "Redirect URLs must be absolute HTTPS; parameters ignored; no #",
+      "Authorization code expires after 30 minutes; access tokens last 60 days",
+      "Programmatic refresh tokens are available only to a limited set of partners",
+      "LinkedIn is listed as Composio-managed OAuth"
+    ],
+    "corrected": [
+      "Corrected: the guide said Composio has NO managed auth for LinkedIn — the directory lists LinkedIn (flag and blocker fixed)",
+      "Added: token and code lifetimes, redirect URL rules"
+    ],
+    "unverified": [
+      "The 1–4 week product-approval timeline (not published)",
+      "Company Page requirement for creating an app (not on the page checked)",
+      "Marketing Partner restrictions and rate-limit claims"
+    ]
+  },
+  "next_step": "Create the app in the LinkedIn Developer Portal, open the Products tab and request the product that grants the scopes you need — approval is the long pole, so apply first.",
+  "if_blocked": [
+    {
+      "situation": "Product access denied or pending",
+      "action": "Re-apply with a specific, concrete use case; do not request products you do not need. Contact developer support if it stays pending.",
+      "url": "https://www.linkedin.com/help/linkedin/ask/dsapi"
+    },
+    {
+      "situation": "invalid scope / redirect_uri mismatch (401)",
+      "action": "Only request scopes your app has Products for, and send a redirect_uri identical to one in the Auth tab."
+    }
+  ]
 }
-

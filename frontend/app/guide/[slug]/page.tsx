@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { fetchGuide } from '@/lib/api';
 import GuideDetail from '@/components/GuideDetail';
+import { decodeGuide } from '@/lib/share';
 import type { OAuthGuide } from '@/lib/types';
 
 export default function GuidePage() {
@@ -18,7 +19,12 @@ export default function GuidePage() {
     if (!slug) return;
     fetchGuide(slug)
       .then(setGuide)
-      .catch(() => setError('Guide not found or backend is not running.'))
+      // The server may have lost a generated guide (ephemeral disk) — rebuild it from the share link.
+      .catch(async () => {
+        const fromLink = await decodeGuide(window.location.hash);
+        if (fromLink) setGuide(fromLink);
+        else setError('Guide not found, expired, or the backend is not running.');
+      })
       .finally(() => setLoading(false));
   }, [slug]);
 

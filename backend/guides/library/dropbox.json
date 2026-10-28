@@ -15,7 +15,8 @@
     "Production status requires Dropbox review: 1–5 business days",
     "Two access types: App folder (sandboxed) vs Full Dropbox access",
     "Full Dropbox access requires more scrutiny during production review",
-    "Composio managed auth available for prototyping"
+    "Composio managed auth available for prototyping",
+    "Register the exact redirect URI(s) in the App Console; scopes are chosen in the Permissions tab, and legacy permission types are deprecated in favour of scoped apps"
   ],
   "steps": [
     {
@@ -74,8 +75,16 @@
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["files.content.read", "files.content.write", "files.metadata.read", "sharing.read"],
-    "restricted_scopes": ["team_data.member", "team_data.governance.write"]
+    "allowed_scopes": [
+      "files.content.read",
+      "files.content.write",
+      "files.metadata.read",
+      "sharing.read"
+    ],
+    "restricted_scopes": [
+      "team_data.member",
+      "team_data.governance.write"
+    ]
   },
   "blockers": [
     {
@@ -87,8 +96,18 @@
   ],
   "agent_actions": [
     {
-      "action": "Research Dropbox developer app creation and production approval",
-      "result": "Found clear two-stage process: development (instant) → production (review required)",
+      "action": "Fetched and read https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "4 claims confirmed, 0 corrected, 1 could not be verified.",
       "status": "done"
     }
   ],
@@ -104,7 +123,32 @@
       "type": "official_docs"
     }
   ],
-  "confidence": "verified",
-  "last_verified": "2025-01-15"
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Redirect URIs must be registered in the App Console and match the authorization request",
+      "Scopes are selected in the Permissions tab; request the minimum needed",
+      "Legacy app permission types are deprecated; Dropbox recommends scoped apps",
+      "Dropbox is listed as Composio-managed OAuth"
+    ],
+    "corrected": [],
+    "unverified": [
+      "Development vs production status, user limits and production-approval timeline (1–5 days) — the page checked does not cover them"
+    ]
+  },
+  "next_step": "Create the app in the Dropbox App Console, pick scoped access, add your redirect URI and the minimum scopes, then test with your own account.",
+  "if_blocked": [
+    {
+      "situation": "Production approval is slow",
+      "action": "Apply for production status early, with a clear description of how you use each scope; respond promptly to Dropbox's questions.",
+      "url": "https://www.dropbox.com/developers/apps"
+    }
+  ]
 }
-

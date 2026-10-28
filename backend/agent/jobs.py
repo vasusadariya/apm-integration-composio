@@ -22,10 +22,11 @@ _slots: asyncio.Semaphore | None = None
 
 
 class Job:
-    def __init__(self, app_name: str, website_url: str | None):
+    def __init__(self, app_name: str, website_url: str | None, fresh: bool = False):
         self.id = uuid.uuid4().hex[:12]
         self.app_name = app_name
         self.website_url = website_url
+        self.fresh = fresh
         self.created_at = time.time()
         self.events: list[dict] = []
         self.finished = False
@@ -50,8 +51,8 @@ def _cleanup() -> None:
     cutoff = time.time() - JOB_TTL_SECONDS
     for jid in [j for j, job in _jobs.items() if job.created_at < cutoff and job.finished]:
         job = _jobs.pop(jid)
-        if _by_key.get(slugify(job.app_name)) == jid:
-            _by_key.pop(slugify(job.app_name), None)
+        if _by_key.get(_key(job.app_name, job.fresh)) == jid:
+            _by_key.pop(_key(job.app_name, job.fresh), None)
 
 
 async def _run(job: Job, api_key: str) -> None:
@@ -62,7 +63,7 @@ async def _run(job: Job, api_key: str) -> None:
         if _slots.locked():
             await job.emit({"type": "status", "message": "Waiting for a free research slot…"})
         async with _slots:
-            await research(job.app_name, job.website_url, api_key, job.emit)
+            await research(job.app_name, job.website_url, api_key, job.emit, job.fresh)
     except Exception as e:  # noqa: BLE001
         await job.emit({"type": "error", "message": f"Unexpected error: {str(e)[:200]}"})
     finally:
@@ -70,15 +71,21 @@ async def _run(job: Job, api_key: str) -> None:
             await job.emit({"type": "error", "message": "Research ended unexpectedly."})
 
 
-def start_job(app_name: str, website_url: str | None, api_key: str) -> tuple[Job, bool]:
+def _key(app_name: str, fresh: bool) -> str:
+    return slugify(app_name) + (":fresh" if fresh else "")
+
+
+def start_job(app_name: str, website_url: str | None, api_key: str, fresh: bool = False, before_start=None) -> tuple[Job, bool]:
     """Start a job, or return the existing one for the same app. Returns (job, reused)."""
     _cleanup()
-    key = slugify(app_name)
+    key = _key(app_name, fresh)
     existing = _jobs.get(_by_key.get(key, ""))
     # Reuse a running job, or a successful one (re-running a failed job is allowed).
     if existing and (not existing.finished or existing.status == "done"):
         return existing, True
-    job = Job(app_name, website_url)
+    if before_start:
+        before_start()  # may raise (e.g. rate limit) before any work is scheduled
+    job = Job(app_name, website_url, fresh)
     _jobs[job.id] = job
     _by_key[key] = job.id
     asyncio.create_task(_run(job, api_key))

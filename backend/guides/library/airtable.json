@@ -67,8 +67,15 @@
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["data.records:read", "data.records:write", "data.recordComments:read", "schema.bases:read"],
-    "restricted_scopes": ["webhook:manage"]
+    "allowed_scopes": [
+      "data.records:read",
+      "data.records:write",
+      "data.recordComments:read",
+      "schema.bases:read"
+    ],
+    "restricted_scopes": [
+      "webhook:manage"
+    ]
   },
   "blockers": [
     {
@@ -80,9 +87,14 @@
   ],
   "agent_actions": [
     {
-      "action": "Research Airtable OAuth integration creation process",
-      "result": "Confirmed instant self-service OAuth integration creation at airtable.com/create/oauth",
+      "action": "Checked Composio managed-auth directory",
+      "result": "Airtable is listed as Composio-managed OAuth",
       "status": "done"
+    },
+    {
+      "action": "Verify setup steps and timelines against provider documentation",
+      "result": "Setup steps, requirements and approval timeline were written from public documentation and have NOT been re-checked against live sources in this verification pass",
+      "status": "partial"
     }
   ],
   "sources": [
@@ -92,7 +104,27 @@
       "type": "official_docs"
     }
   ],
-  "confidence": "verified",
-  "last_verified": "2025-01-15"
+  "confidence": "source_supported",
+  "last_verified": "2025-01-15",
+  "verification": {
+    "status": "not_checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Airtable is listed as Composio-managed OAuth"
+    ],
+    "corrected": [],
+    "unverified": [
+      "Setup steps, requirements and approval timeline were written from public documentation and have NOT been re-checked against live sources in this verification pass"
+    ]
+  },
+  "next_step": "Create an OAuth integration in the Airtable developer hub, add redirect URLs and scopes, then authorize a test base.",
+  "if_blocked": [
+    {
+      "situation": "A base is not accessible after authorizing",
+      "action": "Airtable grants access per base/workspace; have the user re-authorize and select the base."
+    }
+  ]
 }
-

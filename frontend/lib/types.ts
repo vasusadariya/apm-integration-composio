@@ -40,6 +40,21 @@ export interface AgentAction {
   status: 'done' | 'partial' | 'blocked';
 }
 
+export interface IfBlocked {
+  situation: string;
+  action: string;
+  url?: string;
+}
+
+export interface Verification {
+  status: 'checked' | 'automated_checks' | 'not_checked';
+  checked_on?: string;
+  checked_against: string[];
+  confirmed: string[];
+  corrected: string[];
+  unverified: string[];
+}
+
 export interface OAuthGuide {
   app: string;
   slug: string;
@@ -60,6 +75,9 @@ export interface OAuthGuide {
   sources: Source[];
   confidence: 'verified' | 'source_supported' | 'inferred' | 'uncertain';
   last_verified: string;
+  next_step?: string | null;
+  if_blocked?: IfBlocked[];
+  verification?: Verification | null;
 }
 
 export type GuideCard = Pick<OAuthGuide,

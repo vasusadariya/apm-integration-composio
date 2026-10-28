@@ -6,17 +6,17 @@
   "generated_at": "2025-01-15T00:00:00Z",
   "difficulty": "medium",
   "setup_time_estimate": "1–3 hours",
-  "approval_time_estimate": "1–5 business days (required for public integrations)",
+  "approval_time_estimate": "Review required for public connections (timeline not published)",
   "requires_approval": true,
   "composio_managed_auth": true,
-  "summary": "Notion OAuth integrations are moderately complex. Internal integrations (for your own workspace) need no approval and work instantly. Public integrations (used by any Notion user) require Notion's review process, which takes 1–5 business days. Notion's OAuth is non-standard: users explicitly select which pages/databases to grant access to, and the integration only sees content the user explicitly shares. This is important to communicate to your users.",
+  "summary": "Notion has two kinds of connections (formerly 'integrations'). Internal ones use a static token for one workspace and involve no OAuth. Public ones use OAuth 2.0 and can be installed in any workspace; their authorization URL only becomes available after the public connection is submitted for review. Users choose which pages to share, so your connection only sees what each user grants.",
   "key_facts": [
     "Internal integrations are instant — no review needed (but only work in your own workspace)",
-    "Public integrations (for other users) require Notion's review: 1–5 business days",
+    "Public connections use OAuth 2.0; the authorization URL is only issued after the connection is submitted for review (Notion publishes no review timeline)",
     "Notion uses a unique permission model: users select specific pages to grant access, not entire workspaces",
     "Your integration will NOT automatically see all user content — users must explicitly share pages",
-    "A live, public-facing website describing your integration is required for public review",
-    "Privacy policy required for public integration submission",
+    "The installation scope (any workspace vs selected workspaces) cannot be changed after the connection is created",
+    "Token exchange uses HTTP Basic auth with your client ID and secret; store the refresh token to renew access",
     "Composio managed auth available for prototyping"
   ],
   "steps": [
@@ -74,12 +74,18 @@
   ],
   "requirements": {
     "account_type": "Free Notion account works for internal integrations; any account works for public",
-    "needs_live_website": true,
-    "needs_privacy_policy": true,
+    "needs_live_website": false,
+    "needs_privacy_policy": false,
     "needs_terms_of_service": false,
     "needs_video_demo": false,
     "needs_security_audit": false,
-    "allowed_scopes": ["read_content", "update_content", "insert_content", "read_user_info_email", "read_user_info_without_email"],
+    "allowed_scopes": [
+      "read_content",
+      "update_content",
+      "insert_content",
+      "read_user_info_email",
+      "read_user_info_without_email"
+    ],
     "restricted_scopes": []
   },
   "blockers": [
@@ -98,13 +104,18 @@
   ],
   "agent_actions": [
     {
-      "action": "Research Notion integration types and OAuth flow",
-      "result": "Identified key distinction between Internal (instant) and Public (requires review) integration types",
+      "action": "Fetched and read https://developers.notion.com/docs/authorization",
+      "result": "Compared the page against this guide's claims.",
       "status": "done"
     },
     {
-      "action": "Investigate Notion's unique page-level permission model",
-      "result": "Confirmed users grant per-page access, not workspace access — critical UX consideration",
+      "action": "Fetched and read https://docs.composio.dev/toolkits/managed-auth",
+      "result": "Compared the page against this guide's claims.",
+      "status": "done"
+    },
+    {
+      "action": "Summarised the comparison",
+      "result": "5 claims confirmed, 3 corrected, 2 could not be verified.",
       "status": "done"
     }
   ],
@@ -120,7 +131,42 @@
       "type": "official_docs"
     }
   ],
-  "confidence": "verified",
-  "last_verified": "2025-01-15"
+  "confidence": "source_supported",
+  "last_verified": "2026-10-28",
+  "verification": {
+    "status": "checked",
+    "checked_on": "2026-10-28",
+    "checked_against": [
+      "https://developers.notion.com/docs/authorization",
+      "https://docs.composio.dev/toolkits/managed-auth"
+    ],
+    "confirmed": [
+      "Internal connections use a static token and have no OAuth flow; public connections use OAuth 2.0",
+      "The authorization URL only populates after a public connection is submitted for review",
+      "Each user authorizes individually and shares specific pages; authorization URL uses owner=user",
+      "Token exchange uses HTTP Basic auth; access and refresh tokens are returned",
+      "Notion is listed as Composio-managed OAuth"
+    ],
+    "corrected": [
+      "Corrected: \"1–5 business days\" review timeline removed — Notion publishes none",
+      "Removed: live website / privacy policy as hard requirements — not stated on the page checked",
+      "Added: installation scope is immutable after creation; terminology is now \"connections\""
+    ],
+    "unverified": [
+      "Exact review criteria and whether a privacy policy, terms, or support email are mandatory",
+      "Current portal URL (notion.so/my-integrations may have moved)"
+    ]
+  },
+  "next_step": "Decide internal vs public. Internal: create it in your workspace and share pages manually. Public: configure OAuth redirect URIs, then submit for review.",
+  "if_blocked": [
+    {
+      "situation": "Authorization URL not shown for your public connection",
+      "action": "Submit the connection for review in the developer portal; the URL is issued after submission.",
+      "url": "https://developers.notion.com/docs/authorization"
+    },
+    {
+      "situation": "Your app cannot see a page",
+      "action": "The user must share that page (or its parent) with the connection during authorization."
+    }
+  ]
 }
-
