@@ -83,6 +83,24 @@ class TestOAuthGuideAPI(unittest.TestCase):
             self.assertIn(obj.difficulty, ["easy", "medium", "hard", "very_hard"])
 
 
+
+class TestGeneratedGuides(unittest.TestCase):
+    def test_normalize_guide_validates_and_merges_sources(self):
+        import json
+        from agent.researcher import extract_json, normalize_guide
+        base = load_guide("github")
+        base["confidence"] = "verified"
+        base["slug"] = "My App!"
+        raw = "Here you go:\n```json\n" + json.dumps(base) + "\n```"
+        g = normalize_guide(extract_json(raw), "My App", [{"title": "t", "url": "https://x.dev/docs", "type": "official_docs"}])
+        self.assertEqual(g["slug"], "my-app")
+        self.assertEqual(g["confidence"], "source_supported")
+        self.assertTrue(any(s["url"] == "https://x.dev/docs" for s in g["sources"]))
+
+    def test_invalid_slug_rejected(self):
+        res = TestClient(app).get("/api/guides/..%2Fmain")
+        self.assertEqual(res.status_code, 404)
+
 if __name__ == "__main__":
     unittest.main()
 
