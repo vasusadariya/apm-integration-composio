@@ -4,6 +4,7 @@ Serves pre-built guides and streams AI-generated guides via SSE.
 """
 import json
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from agent.researcher import stream_guide_generation
+from agent.researcher import GENERATED_DIR, stream_guide_generation
 
 load_dotenv()
 
@@ -31,6 +32,8 @@ app.add_middleware(
 )
 
 LIBRARY_DIR = Path(__file__).parent / "guides" / "library"
+
+
 def get_api_key() -> str:
     """Retrieve the current GEMINI_API_KEY, reloading .env if needed."""
     load_dotenv(override=True)
@@ -41,7 +44,11 @@ def get_api_key() -> str:
 
 def load_guide(slug: str) -> dict:
     """Load a pre-built guide JSON by slug."""
+    if not re.fullmatch(r"[a-z0-9-]+", slug):
+        raise HTTPException(status_code=404, detail="Invalid guide slug")
     guide_path = LIBRARY_DIR / f"{slug}.json"
+    if not guide_path.exists():
+        guide_path = GENERATED_DIR / f"{slug}.json"
     if not guide_path.exists():
         raise HTTPException(status_code=404, detail=f"Guide '{slug}' not found in library")
     with open(guide_path) as f:

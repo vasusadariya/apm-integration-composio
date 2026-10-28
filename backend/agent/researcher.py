@@ -5,6 +5,8 @@ Investigates a given app/URL and generates a structured OAuth setup guide.
 import json
 import os
 import asyncio
+import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -96,6 +98,49 @@ Return ONLY the JSON object, no markdown fences, no extra text.
 """
 
 LIBRARY_DIR = Path(__file__).parent.parent / "guides" / "library"
+GENERATED_DIR = Path(__file__).parent.parent / "guides" / "generated"
+
+DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
+
+
+def slugify(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "app"
+
+
+def extract_json(text: str) -> dict:
+    """Parse a JSON object out of model output, tolerating fences and prose."""
+    text = text.strip()
+    start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end == -1:
+        raise json.JSONDecodeError("No JSON object found", text, 0)
+    return json.loads(text[start : end + 1])
+
+
+def normalize_guide(data: dict, app_name: str, grounded_sources: list[dict]) -> dict:
+    """Coerce model output to the OAuthGuide schema and merge grounding sources."""
+    from guides.schema import OAuthGuide
+
+    data["slug"] = slugify(data.get("slug") or data.get("app") or app_name)
+    data["generated_at"] = datetime.now(timezone.utc).isoformat()
+    data.setdefault("last_verified", datetime.now(timezone.utc).date().isoformat())
+    data.setdefault("logo_url", f"https://www.google.com/s2/favicons?domain={data.get('website', '')}&sz=128")
+    for step in data.get("steps", []):
+        step["warnings"] = step.get("warnings") or []
+        step["url"] = step.get("url") or None
+    seen = {s.get("url") for s in data.get("sources", [])}
+    for src in grounded_sources:
+        if src["url"] not in seen:
+            data.setdefault("sources", []).append(src)
+            seen.add(src["url"])
+    # Never claim "verified" for an AI-generated guide.
+    if data.get("confidence") == "verified":
+        data["confidence"] = "source_supported"
+    return OAuthGuide(**data).model_dump()
+
+
+def save_generated_guide(guide: dict) -> None:
+    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+    (GENERATED_DIR / f"{guide['slug']}.json").write_text(json.dumps(guide, indent=2))
 
 
 def find_matching_library_guide(app_name: str) -> dict | None:
@@ -170,38 +215,42 @@ async def stream_guide_generation(
 
     yield f"data: {json.dumps({'type': 'status', 'message': 'Searching provider developer documentation...'})}\n\n"
 
-    def _call_gemini() -> str:
-        configured_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
-        candidate_models = [
-            configured_model,
-            "gemini-3.5-flash",
-            "gemini-3.8-flash",
-            "gemini-flash-latest",
-        ]
-        models_to_try = list(dict.fromkeys(candidate_models))
+    def _call_gemini() -> tuple[str, list[dict]]:
+        configured_model = os.getenv("GEMINI_MODEL", "").strip()
+        models_to_try = list(dict.fromkeys([m for m in [configured_model, *DEFAULT_MODELS] if m]))
 
         last_err = None
-        for model_name in models_to_try:
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
+        # Prefer Google Search grounding; fall back to plain generation if the
+        # search tool is unavailable (quota, unsupported model).
+        for use_search in (True, False):
+            for model_name in models_to_try:
+                try:
+                    config = types.GenerateContentConfig(
                         system_instruction=SYSTEM_INSTRUCTION,
                         temperature=0.2,
-                    ),
-                )
-                return response.text.strip()
-            except Exception as e:
-                last_err = e
-                err_str = str(e)
-                if "404" in err_str or "NOT_FOUND" in err_str or "no longer available" in err_str:
+                        tools=[types.Tool(google_search=types.GoogleSearch())] if use_search else None,
+                    )
+                    response = client.models.generate_content(
+                        model=model_name, contents=prompt, config=config
+                    )
+                    sources: list[dict] = []
+                    if use_search and response.candidates:
+                        meta = response.candidates[0].grounding_metadata
+                        for chunk in (meta.grounding_chunks or []) if meta else []:
+                            if chunk.web and chunk.web.uri:
+                                sources.append({
+                                    "title": chunk.web.title or chunk.web.uri,
+                                    "url": chunk.web.uri,
+                                    "type": "official_docs" if re.search(r"docs?\.|developer|api\.", chunk.web.uri + (chunk.web.title or "")) else "community",
+                                })
+                    return (response.text or "").strip(), sources
+                except Exception as e:
+                    last_err = e
                     continue
-                continue
 
         if last_err:
             raise last_err
-        return ""
+        return "", []
 
     # Start generation in thread
     generation_task = asyncio.create_task(asyncio.to_thread(_call_gemini))
@@ -222,22 +271,21 @@ async def stream_guide_generation(
             step_index += 1
         await asyncio.sleep(2.0)
 
+    raw_text = ""
     try:
-        raw_text = await generation_task
+        raw_text, grounded_sources = await generation_task
+        if grounded_sources:
+            yield f"data: {json.dumps({'type': 'status', 'message': f'Consulted {len(grounded_sources)} web sources via Google Search'})}\n\n"
 
-        # Clean markdown code fences
-        if raw_text.startswith("```"):
-            lines = raw_text.split("\n")
-            raw_text = "\n".join(lines[1:-1]) if lines[-1].strip() == "```" else "\n".join(lines[1:])
-
-        guide_data = json.loads(raw_text)
+        guide_data = normalize_guide(extract_json(raw_text), app_name, grounded_sources)
+        save_generated_guide(guide_data)
 
         yield f"data: {json.dumps({'type': 'status', 'message': 'Guide generation complete!'})}\n\n"
         yield f"data: {json.dumps({'type': 'guide', 'data': guide_data})}\n\n"
         yield f"data: {json.dumps({'type': 'done', 'message': 'Guide generation complete'})}\n\n"
 
-    except json.JSONDecodeError as e:
-        yield f"data: {json.dumps({'type': 'error', 'message': f'Failed to parse guide JSON: {str(e)}'})}\n\n"
+    except (json.JSONDecodeError, ValueError) as e:
+        yield f"data: {json.dumps({'type': 'error', 'message': f'Failed to parse guide JSON: {str(e)[:300]}'})}\n\n"
         yield f"data: {json.dumps({'type': 'raw', 'text': raw_text or 'No output'})}\n\n"
     except Exception as e:
         err_msg = str(e)

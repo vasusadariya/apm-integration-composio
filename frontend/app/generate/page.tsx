@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import Link from 'next/link';
 import type { OAuthGuide } from '@/lib/types';
 import { API_URL } from '@/lib/api';
+import GuideDetail from '@/components/GuideDetail';
 
 type SSEEvent =
   | { type: 'status'; message: string }
@@ -11,118 +12,6 @@ type SSEEvent =
   | { type: 'done'; message: string }
   | { type: 'error'; message: string }
   | { type: 'raw'; text: string };
-
-function DifficultyBadge({ difficulty }: { difficulty: string }) {
-  const config: Record<string, { label: string; cls: string }> = {
-    easy:      { label: '🟢 Easy',      cls: 'bg-green-100 text-green-800' },
-    medium:    { label: '🟡 Medium',    cls: 'bg-yellow-100 text-yellow-800' },
-    hard:      { label: '🟠 Hard',      cls: 'bg-orange-100 text-orange-800' },
-    very_hard: { label: '🔴 Very Hard', cls: 'bg-red-100 text-red-800' },
-  };
-  const c = config[difficulty] ?? { label: difficulty, cls: 'bg-slate-100 text-slate-800' };
-  return (
-    <span className={`px-3 py-1 rounded-full text-sm font-bold ${c.cls}`}>{c.label}</span>
-  );
-}
-
-function GuidePreview({ guide }: { guide: OAuthGuide }) {
-  const agentSteps = guide.steps.filter(s => s.agent_can_do).length;
-
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      {/* Hero */}
-      <div className="p-6 border-b border-slate-100">
-        <div className="flex flex-wrap items-center gap-3 mb-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={guide.logo_url} alt={guide.app} className="w-10 h-10 object-contain rounded-lg bg-slate-100 p-1"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">{guide.app}</h2>
-            <p className="text-sm text-slate-500">{guide.website}</p>
-          </div>
-          <DifficultyBadge difficulty={guide.difficulty} />
-        </div>
-        <p className="text-slate-700 text-sm leading-relaxed">{guide.summary}</p>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-          {[
-            { label: 'Setup Time', value: guide.setup_time_estimate },
-            { label: 'Approval Wait', value: guide.approval_time_estimate },
-            { label: 'Review', value: guide.requires_approval ? 'Required' : 'Not required' },
-            { label: 'Agent Steps', value: `${agentSteps}/${guide.steps.length}` },
-          ].map(m => (
-            <div key={m.label} className="bg-slate-50 rounded-xl p-3 text-center">
-              <p className="text-xs text-slate-500">{m.label}</p>
-              <p className="font-semibold text-slate-800 text-sm mt-0.5">{m.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Steps */}
-      <div className="p-6 border-b border-slate-100">
-        <h3 className="font-bold text-slate-800 mb-4">Steps ({guide.steps.length})</h3>
-        <div className="space-y-3">
-          {guide.steps.map((step) => (
-            <div key={step.number} className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                {step.number}
-              </div>
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="font-medium text-slate-800 text-sm">{step.title}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                    step.agent_can_do ? 'bg-purple-50 text-purple-700' : 'bg-slate-50 text-slate-600'
-                  }`}>
-                    {step.agent_can_do ? '🤖' : '👤'} {step.estimated_time}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600">{step.description.substring(0, 160)}...</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Blockers */}
-      {guide.blockers.length > 0 && (
-        <div className="p-6 border-b border-slate-100">
-          <h3 className="font-bold text-slate-800 mb-3">Blockers & Gotchas ({guide.blockers.length})</h3>
-          <div className="space-y-2">
-            {guide.blockers.map((b, i) => (
-              <div key={i} className={`rounded-lg p-3 border text-sm ${
-                b.severity === 'blocking' ? 'bg-red-50 border-red-200 text-red-800' :
-                b.severity === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-800' :
-                'bg-blue-50 border-blue-200 text-blue-800'
-              }`}>
-                <span className="font-medium">{b.severity === 'blocking' ? '🚫' : '⚠️'} {b.title}: </span>
-                {b.description}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Sources */}
-      <div className="p-6 bg-slate-50">
-        <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Sources</p>
-        <div className="space-y-1">
-          {guide.sources.map((s, i) => (
-            <a key={i} href={s.url} target="_blank" rel="noopener noreferrer"
-              className="block text-sm text-blue-600 hover:underline truncate"
-            >
-              📄 {s.title}
-            </a>
-          ))}
-        </div>
-        <p className="text-xs text-slate-400 mt-3">
-          Confidence: <span className="capitalize font-medium">{guide.confidence.replace('_', ' ')}</span>
-          {' · '}Generated by AI research agent with Google Search
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export default function GeneratePage() {
   const [appName, setAppName] = useState('');
@@ -287,24 +176,15 @@ export default function GeneratePage() {
       {/* Generated Guide */}
       {guide && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-slate-900">
-              ✨ Generated Guide: {guide.app}
-            </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                }}
-                className="text-sm px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium"
-              >
-                🔗 Share URL
-              </button>
-            </div>
+          <div className="flex items-center justify-between -mb-4">
+            <h2 className="text-lg font-bold text-slate-900">✨ Generated Guide</h2>
+            <Link href={`/guide/${guide.slug}`} className="text-sm text-blue-600 hover:underline">
+              Open shareable page →
+            </Link>
           </div>
-          <GuidePreview guide={guide} />
+          <GuideDetail guide={guide} shareUrl={`${window.location.origin}/guide/${guide.slug}`} />
           <p className="text-xs text-center text-slate-400 mt-4">
-            Generated by Gemini 2.0 Flash with Google Search grounding · Always verify against provider docs
+            Generated by Gemini with Google Search grounding · Always verify against provider docs
           </p>
         </div>
       )}

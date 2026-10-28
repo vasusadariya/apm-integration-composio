@@ -9,7 +9,7 @@ When a developer builds an AI agent with Composio, their users need to connect t
 
 This platform solves that by:
 
-1. **Guide Library** — Pre-researched, structured guides for 10 apps covering the full difficulty spectrum
+1. **Guide Library** — Pre-researched, structured guides for 12 apps covering the full difficulty spectrum
 2. **Live AI Generation** — Submit any app name/URL → a Gemini agent researches it in real time and streams a complete guide
 
 ---
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 # Set your Gemini API key
 cp .env.example .env
-# Edit .env and add: GEMINI_API_KEY=your_key_here
+# Edit .env and add: GEMINI_API_KEY=your_key_here (see ../.env.example)
 
 uvicorn main:app --reload
 # API running at http://localhost:8000
@@ -51,7 +51,7 @@ Open [http://localhost:3000](http://localhost:3000) — the guide library should
 
 ---
 
-## Guide Library (10 Apps)
+## Guide Library (12 Apps)
 
 | App | Difficulty | Approval Time | Key Challenge |
 |-----|-----------|---------------|---------------|
@@ -64,6 +64,7 @@ Open [http://localhost:3000](http://localhost:3000) — the guide library should
 | Microsoft | 🟡 Medium | Instant/days | Admin consent for org scopes |
 | Salesforce | 🟠 Hard | 1–3 weeks (AppExchange) | Multi-instance URL complexity |
 | Twitter/X | 🟠 Hard | 1–5 days | Paid tier required ($100/mo) |
+| Zoom | 🟠 Hard | 3–10 days | Marketplace publishing review |
 | LinkedIn | 🔴 Hard | 1–4 weeks | Product-based API access tiers |
 | Google | 🔴 Very Hard | 4–6 weeks | CASA security audit ($4K–75K) |
 
@@ -78,7 +79,9 @@ Enter any app name (e.g., "Stripe", "Figma", "Shopify") and optionally its websi
 1. Search for the provider's developer portal and OAuth documentation
 2. Extract setup steps, scope requirements, and approval processes
 3. Identify blockers, prerequisites, and time estimates
-4. Stream results progressively to the UI
+4. Stream progress to the UI, then save the guide so it has a shareable `/guide/<slug>` URL
+
+If Google Search grounding is unavailable (quota/model), it falls back to ungrounded generation and the guide's confidence reflects that. AI-generated guides are never marked "verified".
 
 **Requires:** `GEMINI_API_KEY` set in `backend/.env`
 
@@ -89,18 +92,20 @@ Enter any app name (e.g., "Stripe", "Figma", "Shopify") and optionally its websi
 ```
 frontend/ (Next.js 15 + TailwindCSS)
   ├── app/page.tsx         # Home: searchable guide library
-  ├── app/guide/[slug]/    # Individual guide pages
-  └── app/generate/        # Live AI generation page
+  ├── app/guide/[slug]/    # Guide page (library + generated)
+  ├── app/generate/        # Live AI generation page
+  └── components/GuideDetail.tsx  # Shared guide renderer (collapsible steps, checkable requirements)
 
 backend/ (FastAPI + Python)
   ├── main.py              # API server with CORS, SSE streaming
   ├── agent/researcher.py  # Gemini agent with Google Search grounding
-  └── guides/library/      # 10 pre-built JSON guides
+  └── guides/library/      # 12 pre-built JSON guides
+  └── guides/generated/    # Live-generated guides, cached so /guide/<slug> is shareable (gitignored)
 ```
 
 **Key technical choices:**
 - **SSE (Server-Sent Events)** for live streaming — shows agent progress in real time
-- **Gemini 2.0 Flash + Google Search grounding** — researches official docs on demand
+- **Gemini Flash + Google Search grounding** — researches official docs on demand
 - **JSON flat-file storage** — no database needed, guides are version-controlled
 - **No auth/accounts** — shareable guide URLs work without login
 
