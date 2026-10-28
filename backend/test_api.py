@@ -101,6 +101,38 @@ class TestGeneratedGuides(unittest.TestCase):
         res = TestClient(app).get("/api/guides/..%2Fmain")
         self.assertEqual(res.status_code, 404)
 
+
+class TestResearchJobs(unittest.IsolatedAsyncioTestCase):
+    async def test_library_job_replays_events_and_is_reused(self):
+        from agent import jobs
+        job, reused = jobs.start_job("GitHub", None, "key")
+        self.assertFalse(reused)
+        first = [e async for e in jobs.stream_events(job)]
+        self.assertIn('"type": "guide"', "".join(first))
+        self.assertEqual(job.status, "done")
+        # A late client (page refresh) can replay everything and resume from an offset.
+        replay = [e async for e in jobs.stream_events(job, start=2)]
+        self.assertTrue(replay and replay[0].startswith("id: 2"))
+        again, reused = jobs.start_job("github", None, "key")
+        self.assertTrue(reused)
+        self.assertEqual(again.id, job.id)
+
+    async def test_hung_model_times_out_and_reports_error(self):
+        from agent import jobs, researcher
+
+        async def hang(*a, **k):
+            raise TimeoutError("no response from the model in time")
+
+        orig = researcher._run_attempt
+        researcher._run_attempt = hang
+        try:
+            job, _ = jobs.start_job("Zzz Unknown App", None, "key")
+            events = [e async for e in jobs.stream_events(job)]
+        finally:
+            researcher._run_attempt = orig
+        self.assertEqual(job.status, "error")
+        self.assertIn("took too long", job.events[-1]["message"])
+
 if __name__ == "__main__":
     unittest.main()
 

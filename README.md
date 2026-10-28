@@ -160,14 +160,14 @@ The agent is deliberately **transparent**: each guide shows what was researched,
 
 ### Request flow: live generation
 
-1. The browser `POST`s `{app_name, website_url?}` to `/api/generate`.
-2. The backend validates the API key, then opens a `text/event-stream` response.
-3. **Fast path** — if the name matches a pre-built library guide (e.g. "Gmail", "azure", "x"), the stored guide is streamed back immediately. This is a shortcut, not live research, and is explained in §17.
-4. **Research path** — otherwise Gemini is called in a worker thread with **Google Search grounding** while the server emits heartbeat `status` events every ~2 seconds so the UI never looks frozen.
-5. The raw model output is **parsed** (tolerating code fences and surrounding prose), **normalised** (slug, timestamps, logo, empty fields), **merged** with the web sources Gemini actually consulted, and **validated** against the Pydantic `OAuthGuide` schema.
-6. A guide model claiming `"verified"` is downgraded to `"source_supported"` — an AI-generated guide is never presented as verified.
-7. The guide is **saved** to `backend/guides/generated/<slug>.json` and streamed to the browser as a `guide` event, followed by `done`.
-8. The frontend renders it with the same `GuideDetail` component as library guides, and links to `/guide/<slug>`, which the backend can now serve.
+1. The browser `POST`s `{app_name, website_url?}` to `/api/generate`. The backend validates the API key, starts a **background job** (at most 2 research runs at once; others wait their turn) and returns a `job_id`. The frontend puts it in the URL (`/generate?job=…`).
+2. The browser opens `GET /api/jobs/{id}/events` (SSE). The server **replays every recorded event**, then follows the job live. Refresh the page, or reopen the URL, and the same run is rebuilt from the replay.
+3. **Cached or library fast path** — a previously generated guide, or a match with a pre-built library guide (e.g. "Gmail", "azure", "x"), is returned immediately. This is a shortcut, not live research (see §17).
+4. **Research path** — otherwise Gemini is called in a worker thread, **streaming**, with Google Search grounding. Progress lines report real facts (attempt number, characters received, web sources found). Every attempt is **time-bounded** (60 s to first token, 30 s idle, 110 s max; 200 s total). If grounded search stalls or fails, it automatically falls back to ungrounded generation, then to the next model.
+5. The output is **parsed**, **normalised**, **merged** with the sources Gemini consulted, and **validated** against the Pydantic `OAuthGuide` schema. A malformed result moves on to the next attempt.
+6. A guide claiming `"verified"` is downgraded to `"source_supported"`.
+7. The guide is **saved** to `backend/guides/generated/<slug>.json` and emitted as a `guide` event, followed by `done`. Friendly messages are produced for invalid key, rate limit (429) and overload (503).
+8. The frontend renders it with the same `GuideDetail` component as library guides and links to `/guide/<slug>`.
 
 ### SSE event types
 
@@ -457,17 +457,25 @@ Full guide. Looks in the library first, then in `guides/generated/`. The slug mu
 Case-insensitive match on app name or website. An empty `q` returns everything.
 
 ### `POST /api/generate`
-Body:
+Starts (or rejoins) a background research job and returns `{job_id, reused, status}`. Asking for the same app twice reuses the running/finished job. Body:
 ```json
 { "app_name": "Stripe", "website_url": "https://stripe.com" }
 ```
-Returns a `text/event-stream` (see §4 for event types). Returns `400` with a helpful message if `GEMINI_API_KEY` is missing or still the placeholder.
+Returns `400` with a helpful message if `GEMINI_API_KEY` is missing or still the placeholder.
+
+### `GET /api/jobs/{job_id}`
+Job status (`running` / `done` / `error`) and event count. `404` if the session expired.
+
+### `GET /api/jobs/{job_id}/events`
+`text/event-stream` that **replays every event from the start (or from `?start=N` / the `Last-Event-ID` header)** and then follows the job live, with keep-alive comments. This is what lets a refreshed page resume exactly where it was. Event types are listed in §4.
 
 Example with curl:
 ```bash
-curl -N -X POST http://localhost:8000/api/generate \
+curl -X POST http://localhost:8000/api/generate \
   -H "Content-Type: application/json" \
   -d '{"app_name": "Stripe"}'
+# → {"job_id":"abc123…","reused":false,"status":"running"}
+curl -N http://localhost:8000/api/jobs/abc123…/events
 ```
 
 ---
@@ -628,7 +636,8 @@ I want to be explicit about what each claim rests on.
 - **Library shortcut in `/generate`.** If the name matches a library app (including aliases like "Gmail", "Azure", "X"), the stored guide is returned with simulated progress messages rather than a fresh research run. This is faster and more accurate, but it is not live research.
 - **Generated guides are not durable on free hosting** (ephemeral disk). Use a persistent disk or database for long-lived share links.
 - **No rate limiting or auth** on `/api/generate`; a public deployment could burn through the Gemini quota. Add rate limiting before exposing it widely.
-- **Progress heartbeats are time-based.** The status lines during research reflect typical agent phases, not a literal trace of each tool call (the Gemini SDK call is a single request).
+- **Progress is real but coarse.** Status lines report actual attempts, character counts and the number of web sources found while the model streams; they are not a per-tool-call trace.
+- **Jobs live in server memory.** A refresh resumes the same run, but if the server restarts the session is gone and the user must generate again (finished guides are cached on disk).
 - **Checklist progress is per-browser** (`localStorage`), not synced across devices.
 - **Logos** come from favicon services; some may fail and fall back to a letter tile.
 

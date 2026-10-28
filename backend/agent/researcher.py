@@ -6,9 +6,11 @@ import json
 import os
 import asyncio
 import re
+import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import Awaitable, Callable
 
 import google.genai as genai
 from google.genai import types
@@ -177,120 +179,166 @@ def find_matching_library_guide(app_name: str) -> dict | None:
     return None
 
 
-async def stream_guide_generation(
-    app_name: str,
-    website_url: str | None = None,
-    api_key: str = "",
-) -> AsyncGenerator[str, None]:
-    """
-    Stream guide generation events as Server-Sent Event data strings.
-    Yields SSE-formatted strings with live dynamic progress.
-    """
-    yield f"data: {json.dumps({'type': 'status', 'message': f'Starting research on {app_name}...'})}\n\n"
-    await asyncio.sleep(0.4)
+ATTEMPT_FIRST_TOKEN_TIMEOUT = 60   # seconds to wait for the model to start answering
+ATTEMPT_IDLE_TIMEOUT = 30          # max silence once it is streaming
+ATTEMPT_MAX_SECONDS = 110
+TOTAL_BUDGET_SECONDS = 200
 
-    # 1. Quick check: If it matches a pre-verified library app, stream research steps and deliver
+Emit = Callable[[dict], Awaitable[None]]
+
+
+def friendly_error(err: Exception | str) -> str:
+    msg = str(err)
+    if "API_KEY_INVALID" in msg or "API key not valid" in msg:
+        return "Invalid Gemini API key. Check GEMINI_API_KEY in the backend environment."
+    if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+        return "Gemini rate limit reached. Please wait a minute and try again."
+    if "503" in msg or "UNAVAILABLE" in msg or "overloaded" in msg.lower():
+        return "Gemini is temporarily overloaded. Please try again in a moment."
+    return msg[:300]
+
+
+def _stream_attempt(client, model, prompt, use_search, loop, queue, cancel):
+    """Runs in a worker thread: streams one Gemini call, pushing progress onto the queue."""
+    def put(item):
+        loop.call_soon_threadsafe(queue.put_nowait, item)
+
+    try:
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_INSTRUCTION,
+            temperature=0.2,
+            tools=[types.Tool(google_search=types.GoogleSearch())] if use_search else None,
+        )
+        text_parts: list[str] = []
+        sources: dict[str, str] = {}
+        for chunk in client.models.generate_content_stream(model=model, contents=prompt, config=config):
+            if cancel.is_set():
+                return
+            try:
+                piece = chunk.text or ""
+            except Exception:
+                piece = ""
+            if piece:
+                text_parts.append(piece)
+            if chunk.candidates:
+                meta = chunk.candidates[0].grounding_metadata
+                for gc in (meta.grounding_chunks or []) if meta else []:
+                    if gc.web and gc.web.uri:
+                        sources[gc.web.uri] = gc.web.title or gc.web.uri
+            put(("progress", sum(len(p) for p in text_parts), len(sources)))
+        put(("done", "".join(text_parts).strip(), [
+            {
+                "title": title,
+                "url": url,
+                "type": "official_docs" if re.search(r"docs?\.|developer|api\.", url + title) else "community",
+            }
+            for url, title in sources.items()
+        ]))
+    except Exception as e:  # noqa: BLE001
+        put(("error", e))
+
+
+async def _run_attempt(client, model, prompt, use_search, emit: Emit, deadline: float):
+    """One bounded Gemini attempt. Returns (text, sources) or raises."""
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+    cancel = threading.Event()
+    threading.Thread(
+        target=_stream_attempt, args=(client, model, prompt, use_search, loop, queue, cancel), daemon=True
+    ).start()
+
+    started = time.monotonic()
+    got_first = False
+    last_note = 0.0
+    try:
+        while True:
+            remaining = min(deadline, started + ATTEMPT_MAX_SECONDS) - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("attempt exceeded its time limit")
+            wait = min(remaining, ATTEMPT_IDLE_TIMEOUT if got_first else ATTEMPT_FIRST_TOKEN_TIMEOUT)
+            try:
+                item = await asyncio.wait_for(queue.get(), timeout=wait)
+            except asyncio.TimeoutError:
+                raise TimeoutError("no response from the model in time") from None
+            kind = item[0]
+            if kind == "error":
+                raise item[1]
+            if kind == "progress":
+                got_first = True
+                if time.monotonic() - last_note > 4:
+                    last_note = time.monotonic()
+                    extra = f", {item[2]} web sources found" if item[2] else ""
+                    await emit({"type": "status", "message": f"Writing the guide… {item[1]:,} characters{extra}"})
+                continue
+            return item[1], item[2]  # done
+    finally:
+        cancel.set()
+
+
+async def research(app_name: str, website_url: str | None, api_key: str, emit: Emit) -> None:
+    """Research an app and emit status / guide / done / error events through `emit`."""
+    await emit({"type": "status", "message": f"Starting research on {app_name}…"})
+
+    # 1. Already generated recently? Serve it instantly.
+    cached = GENERATED_DIR / f"{slugify(app_name)}.json"
+    if cached.exists():
+        try:
+            guide = json.loads(cached.read_text())
+            await emit({"type": "status", "message": "Found a previously generated guide for this app."})
+            await emit({"type": "guide", "data": guide})
+            await emit({"type": "done", "message": "Guide ready"})
+            return
+        except (OSError, ValueError):
+            pass
+
+    # 2. Pre-verified library guide?
     library_match = find_matching_library_guide(app_name)
     if library_match:
-        app_title = library_match["app"]
-        yield f"data: {json.dumps({'type': 'status', 'message': f'Found official developer portal for {app_title}...'})}\n\n"
-        await asyncio.sleep(0.6)
-        yield f"data: {json.dumps({'type': 'status', 'message': 'Extracting OAuth 2.0 registration flows & credentials...'})}\n\n"
-        await asyncio.sleep(0.6)
-        yield f"data: {json.dumps({'type': 'status', 'message': 'Analyzing scope tiers, permissions & review requirements...'})}\n\n"
-        await asyncio.sleep(0.6)
-        yield f"data: {json.dumps({'type': 'status', 'message': 'Compiling verified setup guide and known blockers...'})}\n\n"
+        await emit({"type": "status", "message": f"{library_match['app']} is in the verified guide library — loading it."})
         await asyncio.sleep(0.4)
-        yield f"data: {json.dumps({'type': 'guide', 'data': library_match})}\n\n"
-        yield f"data: {json.dumps({'type': 'done', 'message': 'Guide generation complete'})}\n\n"
+        await emit({"type": "guide", "data": library_match})
+        await emit({"type": "done", "message": "Guide ready"})
         return
 
-    # 2. For unfamiliar apps: invoke Gemini with dynamic live heartbeats
-    client = genai.Client(api_key=api_key)
-    website_hint = f"Website: {website_url}" if website_url else ""
+    # 3. Live research with Gemini (+ Google Search grounding), bounded by time.
+    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=90_000))
     prompt = GUIDE_PROMPT_TEMPLATE.format(
-        app_name=app_name,
-        website_hint=website_hint,
+        app_name=app_name, website_hint=f"Website: {website_url}" if website_url else ""
     )
+    configured = os.getenv("GEMINI_MODEL", "").strip()
+    models = list(dict.fromkeys([m for m in [configured, *DEFAULT_MODELS] if m]))
+    # Grounded first, then ungrounded on the same and the next model.
+    plan = [(models[0], True), (models[0], False)] + [(m, False) for m in models[1:3]]
 
-    yield f"data: {json.dumps({'type': 'status', 'message': 'Searching provider developer documentation...'})}\n\n"
+    overall_deadline = time.monotonic() + TOTAL_BUDGET_SECONDS
+    last_error = "Research could not be completed."
+    for n, (model, use_search) in enumerate(plan, 1):
+        if overall_deadline - time.monotonic() < 20:
+            break
+        mode = "with Google Search" if use_search else "without web search (faster fallback)"
+        await emit({"type": "status", "message": f"Attempt {n}/{len(plan)}: researching {mode} using {model}…"})
+        try:
+            raw_text, sources = await _run_attempt(client, model, prompt, use_search, emit, overall_deadline)
+            if sources:
+                await emit({"type": "status", "message": f"Consulted {len(sources)} web sources via Google Search"})
+            await emit({"type": "status", "message": "Validating the guide structure…"})
+            guide = normalize_guide(extract_json(raw_text), app_name, sources)
+            save_generated_guide(guide)
+            if slugify(app_name) != guide["slug"]:
+                (GENERATED_DIR / f"{slugify(app_name)}.json").write_text(json.dumps(guide, indent=2))
+            await emit({"type": "guide", "data": guide})
+            await emit({"type": "done", "message": "Guide ready"})
+            return
+        except Exception as e:  # noqa: BLE001 - every failure moves on to the next attempt
+            last_error = friendly_error(e) if not isinstance(e, TimeoutError) else (
+                "The research service took too long to respond."
+            )
+            if isinstance(e, (ValueError, json.JSONDecodeError)):
+                last_error = "The model returned a guide in an unexpected format."
+            await emit({"type": "status", "message": f"Attempt {n} failed: {last_error}"})
+            msg = str(e)
+            if "API_KEY_INVALID" in msg or "API key not valid" in msg:
+                break  # no point retrying
 
-    def _call_gemini() -> tuple[str, list[dict]]:
-        configured_model = os.getenv("GEMINI_MODEL", "").strip()
-        models_to_try = list(dict.fromkeys([m for m in [configured_model, *DEFAULT_MODELS] if m]))
-
-        last_err = None
-        # Prefer Google Search grounding; fall back to plain generation if the
-        # search tool is unavailable (quota, unsupported model).
-        for use_search in (True, False):
-            for model_name in models_to_try:
-                try:
-                    config = types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
-                        temperature=0.2,
-                        tools=[types.Tool(google_search=types.GoogleSearch())] if use_search else None,
-                    )
-                    response = client.models.generate_content(
-                        model=model_name, contents=prompt, config=config
-                    )
-                    sources: list[dict] = []
-                    if use_search and response.candidates:
-                        meta = response.candidates[0].grounding_metadata
-                        for chunk in (meta.grounding_chunks or []) if meta else []:
-                            if chunk.web and chunk.web.uri:
-                                sources.append({
-                                    "title": chunk.web.title or chunk.web.uri,
-                                    "url": chunk.web.uri,
-                                    "type": "official_docs" if re.search(r"docs?\.|developer|api\.", chunk.web.uri + (chunk.web.title or "")) else "community",
-                                })
-                    return (response.text or "").strip(), sources
-                except Exception as e:
-                    last_err = e
-                    continue
-
-        if last_err:
-            raise last_err
-        return "", []
-
-    # Start generation in thread
-    generation_task = asyncio.create_task(asyncio.to_thread(_call_gemini))
-
-    status_steps = [
-        "Found developer portal & OAuth documentation...",
-        "Extracting OAuth client registration and redirect URI rules...",
-        "Analyzing permissions, scope hierarchy, and review thresholds...",
-        "Identifying prerequisites (domain verification, privacy policy, CASA)...",
-        "Evaluating review timeline and common rejection causes...",
-        "Synthesizing structured guide...",
-    ]
-
-    step_index = 0
-    while not generation_task.done():
-        if step_index < len(status_steps):
-            yield f"data: {json.dumps({'type': 'status', 'message': status_steps[step_index]})}\n\n"
-            step_index += 1
-        await asyncio.sleep(2.0)
-
-    raw_text = ""
-    try:
-        raw_text, grounded_sources = await generation_task
-        if grounded_sources:
-            yield f"data: {json.dumps({'type': 'status', 'message': f'Consulted {len(grounded_sources)} web sources via Google Search'})}\n\n"
-
-        guide_data = normalize_guide(extract_json(raw_text), app_name, grounded_sources)
-        save_generated_guide(guide_data)
-
-        yield f"data: {json.dumps({'type': 'status', 'message': 'Guide generation complete!'})}\n\n"
-        yield f"data: {json.dumps({'type': 'guide', 'data': guide_data})}\n\n"
-        yield f"data: {json.dumps({'type': 'done', 'message': 'Guide generation complete'})}\n\n"
-
-    except (json.JSONDecodeError, ValueError) as e:
-        yield f"data: {json.dumps({'type': 'error', 'message': f'Failed to parse guide JSON: {str(e)[:300]}'})}\n\n"
-        yield f"data: {json.dumps({'type': 'raw', 'text': raw_text or 'No output'})}\n\n"
-    except Exception as e:
-        err_msg = str(e)
-        if "API_KEY_INVALID" in err_msg or "API key not valid" in err_msg:
-            err_msg = "Invalid Gemini API key. Please check the GEMINI_API_KEY in backend/.env. You can create a free key at https://aistudio.google.com/app/apikey"
-        elif "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-            err_msg = "Gemini API rate limit reached. Please wait a few seconds and try again."
-        yield f"data: {json.dumps({'type': 'error', 'message': err_msg})}\n\n"
+    retry_hint = "" if "Invalid Gemini API key" in last_error else " Please try again in a minute."
+    await emit({"type": "error", "message": f"{last_error}{retry_hint}"})

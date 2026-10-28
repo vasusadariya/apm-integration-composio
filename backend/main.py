@@ -8,12 +8,13 @@ import re
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from agent.researcher import GENERATED_DIR, stream_guide_generation
+from agent.jobs import get_job, start_job, stream_events
+from agent.researcher import GENERATED_DIR
 
 load_dotenv()
 
@@ -120,30 +121,44 @@ class GenerateRequest(BaseModel):
 @app.post("/api/generate")
 async def generate_guide(request: GenerateRequest):
     """
-    Stream guide generation for any app via SSE.
-    Uses Gemini + Google Search to research and generate the guide in real time.
+    Start (or rejoin) a background research job for an app.
+    Follow it with GET /api/jobs/{id}/events — it survives page refreshes.
     """
+    app_name = request.app_name.strip()
+    if not app_name or len(app_name) > 80:
+        raise HTTPException(status_code=422, detail="App name must be 1-80 characters.")
+
     api_key = get_api_key()
     if not api_key or api_key == "your_gemini_api_key_here":
         raise HTTPException(
             status_code=400,
-            detail="GEMINI_API_KEY is not configured or still set to placeholder in backend/.env. Please get a free API key at https://aistudio.google.com/app/apikey and add it to backend/.env."
+            detail="GEMINI_API_KEY is not configured on the server. Get a free key at https://aistudio.google.com/app/apikey.",
         )
 
-    async def event_stream():
-        async for chunk in stream_guide_generation(
-            app_name=request.app_name,
-            website_url=request.website_url,
-            api_key=api_key,
-        ):
-            yield chunk
+    job, reused = start_job(app_name, request.website_url, api_key)
+    return {"job_id": job.id, "reused": reused, "status": job.status}
 
+
+@app.get("/api/jobs/{job_id}")
+async def job_status(job_id: str):
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Research session not found or expired.")
+    return {"job_id": job.id, "app_name": job.app_name, "status": job.status, "events": len(job.events)}
+
+
+@app.get("/api/jobs/{job_id}/events")
+async def job_events(job_id: str, request: Request, start: int = 0):
+    """SSE stream that replays all events of a job, then follows it live."""
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Research session not found or expired.")
+    # Browsers resend the last seen event id when an EventSource reconnects.
+    last_id = request.headers.get("last-event-id")
+    if last_id and last_id.isdigit():
+        start = int(last_id) + 1
     return StreamingResponse(
-        event_stream(),
+        stream_events(job, max(0, start)),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
     )
-
