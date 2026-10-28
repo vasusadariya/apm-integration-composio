@@ -2,102 +2,165 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { OAuthGuide } from '@/lib/types';
 import { API_URL } from '@/lib/api';
 import GuideDetail from '@/components/GuideDetail';
 import GlitchBars from '@/components/GlitchBars';
 
-type SSEEvent =
+type SSEEvent = { ts?: number } & (
   | { type: 'status'; message: string }
   | { type: 'guide'; data: OAuthGuide }
   | { type: 'done'; message: string }
   | { type: 'error'; message: string }
-  | { type: 'raw'; text: string };
+);
+
+const DRAFT_KEY = 'generate-draft';
 
 const EXAMPLES = ['Stripe', 'Figma', 'Shopify', 'Asana', 'Linear', 'Discord'];
 
 function GeneratePageInner() {
+  const router = useRouter();
   const params = useSearchParams();
+  const jobParam = params.get('job');
+
   const [appName, setAppName] = useState(params.get('app') ?? '');
-  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState(params.get('url') ?? '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [statusMessages, setStatusMessages] = useState<string[]>([]);
   const [guide, setGuide] = useState<OAuthGuide | null>(null);
   const [error, setError] = useState('');
+  const [reconnecting, setReconnecting] = useState(false);
+  const [startedAt, setStartedAt] = useState<number | null>(null); // server epoch ms
   const [elapsed, setElapsed] = useState(0);
-  const abortRef = useRef<AbortController | null>(null);
+  const sourceRef = useRef<EventSource | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
+  // Restore an unsent draft (only when there is no job in the URL)
   useEffect(() => {
-    if (!isGenerating) return;
-    setElapsed(0);
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    if (jobParam || params.get('app')) return;
+    try {
+      const d = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || '{}');
+      if (d.appName) setAppName(d.appName);
+      if (d.websiteUrl) setWebsiteUrl(d.websiteUrl);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ appName, websiteUrl })); } catch {}
+  }, [appName, websiteUrl]);
+
+  // Elapsed time is derived from the server's start time, so it survives refreshes.
+  useEffect(() => {
+    if (!isGenerating || startedAt == null) return;
+    const tick = () => setElapsed(Math.max(0, Math.round((Date.now() - startedAt) / 1000)));
+    tick();
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [isGenerating]);
+  }, [isGenerating, startedAt]);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [statusMessages]);
 
-  const handleGenerate = async (nameOverride?: string) => {
-    const name = (nameOverride ?? appName).trim();
-    if (!name || isGenerating) return;
+  const closeStream = () => {
+    sourceRef.current?.close();
+    sourceRef.current = null;
+  };
 
+  // Follow a job: the server replays every event from the start, so a refreshed page
+  // rebuilds exactly the state it had and then keeps following live.
+  const followJob = (jobId: string) => {
+    closeStream();
     setIsGenerating(true);
     setStatusMessages([]);
     setGuide(null);
     setError('');
-    abortRef.current = new AbortController();
+    setStartedAt(null);
 
+    const es = new EventSource(`${API_URL}/api/jobs/${jobId}/events`);
+    sourceRef.current = es;
+
+    es.onopen = () => setReconnecting(false);
+    es.onmessage = (msg) => {
+      setReconnecting(false);
+      let event: SSEEvent;
+      try { event = JSON.parse(msg.data); } catch { return; }
+      if (event.ts) setStartedAt((prev) => prev ?? event.ts! * 1000);
+
+      if (event.type === 'status') {
+        setStatusMessages((p) => [...p, event.message]);
+      } else if (event.type === 'guide') {
+        setGuide(event.data);
+      } else if (event.type === 'error') {
+        setError(event.message);
+        setIsGenerating(false);
+        closeStream();
+      } else if (event.type === 'done') {
+        setIsGenerating(false);
+        closeStream();
+      }
+    };
+    es.onerror = () => {
+      if (es.readyState === EventSource.CLOSED) {
+        // Server answered with an error (e.g. 404: the session expired or the server restarted)
+        closeStream();
+        setIsGenerating(false);
+        setError('This research session has expired (the server may have restarted). Please generate the guide again.');
+        router.replace('/generate');
+      } else {
+        setReconnecting(true); // the browser retries automatically, resuming from the last event
+      }
+    };
+  };
+
+  // Resume on load / when the URL's job changes
+  useEffect(() => {
+    if (jobParam) followJob(jobParam);
+    else { closeStream(); }
+    return closeStream;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobParam]);
+
+  const handleGenerate = async (nameOverride?: string) => {
+    const name = (nameOverride ?? appName).trim();
+    if (!name || isGenerating) return;
+
+    setError('');
+    setIsGenerating(true);
     try {
       const res = await fetch(`${API_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ app_name: name, website_url: websiteUrl || undefined }),
-        signal: abortRef.current.signal,
       });
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Generation failed');
+        throw new Error(
+          typeof err.detail === 'string' ? err.detail : res.status === 503
+            ? 'The server is waking up or busy. Please try again in a few seconds.'
+            : 'Generation failed',
+        );
       }
-
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split('\n\n');
-        buffer = chunks.pop() ?? '';
-
-        for (const chunk of chunks) {
-          if (!chunk.startsWith('data: ')) continue;
-          try {
-            const event: SSEEvent = JSON.parse(chunk.slice(6));
-            if (event.type === 'status') setStatusMessages((p) => [...p, event.message]);
-            else if (event.type === 'guide') setGuide(event.data);
-            else if (event.type === 'error') setError(event.message);
-          } catch {}
-        }
-      }
+      const { job_id } = await res.json();
+      // Put the job in the URL: refreshing or sharing this tab resumes the same run.
+      const q = new URLSearchParams({ job: job_id, app: name });
+      if (websiteUrl) q.set('url', websiteUrl);
+      router.replace(`/generate?${q.toString()}`);
     } catch (err: unknown) {
-      if (err instanceof Error && err.name !== 'AbortError') {
-        setError(err.message || 'Failed to generate guide. Is the backend running?');
-      }
-    } finally {
       setIsGenerating(false);
+      setError(err instanceof Error ? err.message : 'Failed to start. Is the backend running?');
     }
   };
 
   const reset = () => {
-    abortRef.current?.abort();
+    closeStream();
     setGuide(null);
     setStatusMessages([]);
     setError('');
+    setIsGenerating(false);
+    router.replace('/generate');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -122,7 +185,7 @@ function GeneratePageInner() {
     );
   }
 
-  const started = isGenerating || statusMessages.length > 0 || !!error;
+  const started = isGenerating || statusMessages.length > 0 || !!error || !!jobParam;
 
   return (
     <div>
@@ -203,7 +266,7 @@ function GeneratePageInner() {
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
                 <span className="ml-3 font-mono text-[11px] uppercase tracking-[0.1em] text-white/40">agent — researching {appName}</span>
-                {isGenerating && <span className="ml-auto font-mono text-[11px] text-white/40">{elapsed}s</span>}
+                {isGenerating && <span className="ml-auto font-mono text-[11px] text-white/40">{reconnecting ? 'reconnecting… ' : ''}{elapsed}s</span>}
               </div>
 
               {isGenerating && (
@@ -222,7 +285,7 @@ function GeneratePageInner() {
                 {isGenerating && (
                   <div className="streaming-cursor flex gap-3">
                     <span className="text-brand-300">›</span>
-                    <span className="text-white/40">working</span>
+                    <span className="text-white/40">{reconnecting ? 'connection lost — reconnecting' : 'working'}</span>
                   </div>
                 )}
                 <div ref={logEndRef} />
